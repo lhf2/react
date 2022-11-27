@@ -360,9 +360,13 @@ export function updateContainer(
     }
   }
 
+  // 创建第一次的 Update 对象
   const update = createUpdate(eventTime, lane);
   // Caution: React DevTools currently depends on this property
   // being called "element".
+
+  // update.payload为需要挂载在根节点的组件
+  //对应hostComponent的update的paylad就是Render的第一个参数,createRoot().render(xx)的xx
   update.payload = {element};
 
   callback = callback === undefined ? null : callback;
@@ -379,8 +383,10 @@ export function updateContainer(
     update.callback = callback;
   }
 
+  // 将生成的update对象插入updateQueue
   const root = enqueueUpdate(current, update, lane);
   if (root !== null) {
+    // 开启第一次调度更新 找到rootFiber -> render -> commit
     scheduleUpdateOnFiber(root, current, lane, eventTime);
     entangleTransitions(root, current, lane);
   }

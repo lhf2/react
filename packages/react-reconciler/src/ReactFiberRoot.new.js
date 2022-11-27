@@ -128,6 +128,8 @@ function FiberRootNode(
   }
 }
 
+// 创建 FiberRootNode（一个应用只有一个） 以及 rootFiber（一个应用可以有多个 APP, 因为可以调用多次 render）
+// 并将他们联系起来
 export function createFiberRoot(
   containerInfo: Container,
   tag: RootTag,
@@ -144,6 +146,7 @@ export function createFiberRoot(
   onRecoverableError: null | ((error: mixed) => void),
   transitionCallbacks: null | TransitionTracingCallbacks,
 ): FiberRoot {
+  // FiberRootNode
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
   const root: FiberRoot = (new FiberRootNode(
     containerInfo,
@@ -162,11 +165,13 @@ export function createFiberRoot(
 
   // Cyclic construction. This cheats the type system right now because
   // stateNode is any.
+  // rootFiber
   const uninitializedFiber = createHostRootFiber(
     tag,
     isStrictMode,
     concurrentUpdatesByDefaultOverride,
   );
+  // 连接 rootFiber 和 fiberRootNode
   root.current = uninitializedFiber;
   uninitializedFiber.stateNode = root;
 
@@ -198,6 +203,7 @@ export function createFiberRoot(
     uninitializedFiber.memoizedState = initialState;
   }
 
+  // 初始化rootFiber的updateQueue
   initializeUpdateQueue(uninitializedFiber);
 
   return root;

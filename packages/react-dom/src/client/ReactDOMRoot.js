@@ -142,6 +142,7 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render = functio
       }
     }
   }
+  // 开始流程
   updateContainer(children, root, null, null);
 };
 
@@ -175,6 +176,7 @@ ReactDOMHydrationRoot.prototype.unmount = ReactDOMRoot.prototype.unmount = funct
   }
 };
 
+// 真正执行的 createRoot
 export function createRoot(
   container: Element | Document | DocumentFragment,
   options?: CreateRootOptions,
@@ -233,6 +235,7 @@ export function createRoot(
     }
   }
 
+  // createContainer创建rootFiber和FiberRoot，并且将它们联系起来
   const root = createContainer(
     container,
     ConcurrentRoot,
@@ -256,6 +259,7 @@ export function createRoot(
   listenToAllSupportedEvents(rootContainerElement);
 
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
+  // 返回一个ReactDOMRoot实例，render方法就在ReactDOMRoot的原型上
   return new ReactDOMRoot(root);
 }
 

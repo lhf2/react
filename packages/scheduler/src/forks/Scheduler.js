@@ -180,6 +180,7 @@ function flushWork(hasTimeRemaining: boolean, initialTime: number) {
   try {
     if (enableProfiling) {
       try {
+        // 开始任务调度
         return workLoop(hasTimeRemaining, initialTime);
       } catch (error) {
         if (currentTask !== null) {
@@ -206,6 +207,7 @@ function flushWork(hasTimeRemaining: boolean, initialTime: number) {
   }
 }
 
+// 开始任务调度
 function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   let currentTime = initialTime;
   advanceTimers(currentTime);
@@ -218,6 +220,7 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
       currentTask.expirationTime > currentTime &&
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
+      // 时间片的限制，中断任务
       // This currentTask hasn't expired, and we've reached the deadline.
       break;
     }
@@ -560,6 +563,7 @@ function forceFrameRate(fps: number) {
   }
 }
 
+// 执行者
 const performWorkUntilDeadline = () => {
   if (scheduledHostCallback !== null) {
     const currentTime = getCurrentTime();

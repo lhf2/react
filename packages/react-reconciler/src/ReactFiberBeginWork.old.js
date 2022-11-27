@@ -320,12 +320,15 @@ export function reconcileChildren(
   nextChildren: any,
   renderLanes: Lanes,
 ) {
+  // 对于mount的组件
   if (current === null) {
     // If this is a fresh new component that hasn't been rendered yet, we
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
     // we can optimize this reconciliation pass by not tracking side-effects.
+    // 创建新的子fiber节点，并且将它与父结点关联起来
     workInProgress.child = mountChildFibers(
+      //不会为fiber创建dom
       workInProgress,
       null,
       nextChildren,
@@ -338,6 +341,8 @@ export function reconcileChildren(
 
     // If we had any progressed work already, that is invalid at this point so
     // let's throw it out.
+    // 他会将当前组件与该组件在上次更新时对应的Fiber节点比较（也就是俗称的Diff算法），将比较的结果映射到fiber节点上去，产生effectTag
+    //所以diff算法是在render阶段的递阶段完成的，计算完update得到最新的State之后即开始diff，判断是否加上effectTag
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       current.child,
@@ -1449,7 +1454,9 @@ function updateHostRoot(current, workInProgress, renderLanes) {
   const nextProps = workInProgress.pendingProps;
   const prevState = workInProgress.memoizedState;
   const prevChildren = prevState.element;
+  // 将current fiber上的updateQueue复制到了workInprogress.updateQueue
   cloneUpdateQueue(current, workInProgress);
+  // 消费updateQueue.shard.pending上所有的update环状链表
   processUpdateQueue(workInProgress, nextProps, null, renderLanes);
 
   const nextState: RootState = workInProgress.memoizedState;
@@ -1471,6 +1478,7 @@ function updateHostRoot(current, workInProgress, renderLanes) {
 
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 获取最新的state上面的element元素
   const nextChildren = nextState.element;
   if (supportsHydration && prevState.isDehydrated) {
     // This is a hydration root whose shell has not yet hydrated. We should
@@ -3924,6 +3932,7 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
   return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
 }
 
+// 深度优先遍历
 function beginWork(
   current: Fiber | null,
   workInProgress: Fiber,

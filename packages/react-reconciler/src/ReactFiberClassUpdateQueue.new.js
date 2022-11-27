@@ -209,18 +209,26 @@ export function cloneUpdateQueue<State>(
 
 export function createUpdate(eventTime: number, lane: Lane): Update<mixed> {
   const update: Update<mixed> = {
-    eventTime,
-    lane,
-
-    tag: UpdateState,
+    eventTime, // 任务时间，通过performance.now()获取的毫秒数
+    lane, //优先级
+    // 更新的类型，包括UpdateState | ReplaceState | ForceUpdate | CaptureUpdate
+    tag: UpdateState, 
+    // 对于ClassComponent，payload为this.setState的第一个传参。
+    // 对于HostRoot，payload为ReactDOM.render的第一个传参
+    // 更新挂载的数据
     payload: null,
+    // 更新的回调函数，比如ReactDOM.render(xx,xx,()=>{})，或是this.setState的第二个参数。
     callback: null,
-
+    // 与其他update连成指针（链表）
     next: null,
   };
   return update;
 }
 
+
+// 通过update的next指针，形成环状链表，挂在fiber.UpdateQueue.shard.pending上。
+// update顺序：u1=>u2=>u3 
+// fiber.UpdateQueue.shard.pending = u3=>u2=>u1    	
 export function enqueueUpdate<State>(
   fiber: Fiber,
   update: Update<State>,

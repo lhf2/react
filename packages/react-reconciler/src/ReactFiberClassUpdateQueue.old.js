@@ -465,6 +465,9 @@ function getStateFromUpdate<State>(
   return prevState;
 }
 
+// 1. 将updateQueue上的firstBaseUpdate和lastBaseUpdate取出，将shard.pending上的update环状链表剪开，插入到lastBaseUpdate上。
+// 2. 为了防止update丢失，会将当前，存放到current fiber.update.lastBaseUpdate上
+// 3. 接着开始遍历Update链表，执行update。(do while遍历update链表)
 export function processUpdateQueue<State>(
   workInProgress: Fiber,
   props: any,
@@ -526,11 +529,12 @@ export function processUpdateQueue<State>(
   // These values may change as we process the queue.
   if (firstBaseUpdate !== null) {
     // Iterate through the list of updates to compute the result.
+    // 计算最新的state
     let newState = queue.baseState;
     // TODO: Don't need to accumulate this. Instead, we can remove renderLanes
     // from the original lanes.
     let newLanes = NoLanes;
-
+    // 赋值当前fiber的状态的变量
     let newBaseState = null;
     let newFirstBaseUpdate = null;
     let newLastBaseUpdate = null;
@@ -553,6 +557,8 @@ export function processUpdateQueue<State>(
         ? !isSubsetOfLanes(getWorkInProgressRootRenderLanes(), updateLane)
         : !isSubsetOfLanes(renderLanes, updateLane);
 
+      // 如果有跳过的update，那么此时fiber的state应该停留在跳过的update时候的状态，
+      // 而不应该只计算优先级高的几个update后就拿来当新的state。
       if (shouldSkipUpdate) {
         // Priority is insufficient. Skip this update. If this is the first
         // skipped update, the previous update/state is the new base
@@ -567,9 +573,12 @@ export function processUpdateQueue<State>(
 
           next: null,
         };
+        // 判断update优先级，如果当前update优先级较低，就会跳过，重新插入到一条新的链表中。
+        // 保存在newFirstBaseUpdate和newLastBaseUpdate上，前者永远指向第一个update，后者永远指向最后一个Update。
         if (newLastBaseUpdate === null) {
           newFirstBaseUpdate = newLastBaseUpdate = clone;
           newBaseState = newState;
+          // 有update需要跳过，那么下次fiber.baseState需要停留在此次更新前的state。即这
         } else {
           newLastBaseUpdate = newLastBaseUpdate.next = clone;
         }
@@ -579,6 +588,7 @@ export function processUpdateQueue<State>(
         // This update does have sufficient priority.
 
         if (newLastBaseUpdate !== null) {
+          // 如果已经有update被逃过，当前update也必须保存在链表后面
           const clone: Update<State> = {
             eventTime: updateEventTime,
             // This update is going to be committed so we never want uncommit
@@ -599,6 +609,7 @@ export function processUpdateQueue<State>(
         }
 
         // Process this update.
+        // 执行当前的update,获取state
         newState = getStateFromUpdate(
           workInProgress,
           queue,
@@ -607,6 +618,7 @@ export function processUpdateQueue<State>(
           props,
           instance,
         );
+        // setState或者ReactDOM.render的第三个参数
         const callback = update.callback;
         if (callback !== null) {
           workInProgress.flags |= Callback;
@@ -642,10 +654,13 @@ export function processUpdateQueue<State>(
       }
     } while (true);
 
+    // newLastBaseUpdate表示的是当前跳过的update
     if (newLastBaseUpdate === null) {
+      // 如果没有跳过的update，那么newBaseState的值等于newState
       newBaseState = newState;
     }
 
+    // 更新updateQueue上的baseState
     queue.baseState = ((newBaseState: any): State);
     queue.firstBaseUpdate = newFirstBaseUpdate;
     queue.lastBaseUpdate = newLastBaseUpdate;
@@ -665,6 +680,7 @@ export function processUpdateQueue<State>(
     // that regardless.
     markSkippedUpdateLanes(newLanes);
     workInProgress.lanes = newLanes;
+    // 最新的state保存在当前fiber的memoizedState上
     workInProgress.memoizedState = newState;
   }
 

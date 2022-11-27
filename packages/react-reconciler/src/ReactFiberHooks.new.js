@@ -472,6 +472,8 @@ export function renderWithHooks<Props, SecondArg>(
       ReactCurrentDispatcher.current = HooksDispatcherOnMountInDEV;
     }
   } else {
+    // 分为 mount 跟 update 两个阶段
+    // 对应着不同的 Hook 函数
     ReactCurrentDispatcher.current =
       current === null || current.memoizedState === null
         ? HooksDispatcherOnMount
@@ -817,22 +819,52 @@ export function resetHooksOnUnwind(): void {
   thenableState = null;
 }
 
+// 生成 hook 链表，返回当前指向的 hook
+// 最后的结构
+// const [num, setNum] = useState(0)
+// const fiber = {
+//   memoizedState: 存储的hooks链表,
+//   ...
+// }
+
+// const hook = {
+//   // 状态值
+//   memoizedState: 0,
+//   // 更新队列（环状链表）
+//   queue: [
+//     pending: {
+//       null
+//     }
+//   ],
+//   // 链表指向
+//   next: hook1
+// }
+
+// // 环状链表
+// const update = {
+//   payload,
+//   callback,
+//   next
+// }
 function mountWorkInProgressHook(): Hook {
+  // hook 内部的结构
   const hook: Hook = {
-    memoizedState: null,
+    memoizedState: null, // 存储的是每个 hook 自己的 state
 
     baseState: null,
     baseQueue: null,
-    queue: null,
+    queue: null, // 每个 hook 的更新队列
 
-    next: null,
+    next: null, // hook链表
   };
 
   if (workInProgressHook === null) {
     // This is the first hook in the list
+    // 第一个 hook
     currentlyRenderingFiber.memoizedState = workInProgressHook = hook;
   } else {
     // Append to the end of the list
+    // 添加到链表的尾部
     workInProgressHook = workInProgressHook.next = hook;
   }
   return workInProgressHook;
@@ -1028,11 +1060,14 @@ function basicStateReducer<S>(state: S, action: BasicStateAction<S>): S {
   return typeof action === 'function' ? action(state) : action;
 }
 
+// const [num, setNum] = useReducer(reducer, 0)
+// 更新的时候 setNum({type: 'add'})
 function mountReducer<S, I, A>(
   reducer: (S, A) => S,
   initialArg: I,
   init?: I => S,
 ): [S, Dispatch<A>] {
+  // 创建 hook 链表
   const hook = mountWorkInProgressHook();
   let initialState;
   if (init !== undefined) {
@@ -1040,7 +1075,9 @@ function mountReducer<S, I, A>(
   } else {
     initialState = ((initialArg: any): S);
   }
+  // 存储 hook 的状态值
   hook.memoizedState = hook.baseState = initialState;
+  // 更新队列
   const queue: UpdateQueue<S, A> = {
     pending: null,
     lanes: NoLanes,
@@ -1049,14 +1086,17 @@ function mountReducer<S, I, A>(
     lastRenderedState: (initialState: any),
   };
   hook.queue = queue;
+  // 更新状态的函数
   const dispatch: Dispatch<A> = (queue.dispatch = (dispatchReducerAction.bind(
     null,
+    // 当前 render 的 fiber 节点
     currentlyRenderingFiber,
     queue,
   ): any));
   return [hook.memoizedState, dispatch];
 }
 
+// 更新时候
 function updateReducer<S, I, A>(
   reducer: (S, A) => S,
   initialArg: I,
@@ -1083,6 +1123,8 @@ function updateReducer<S, I, A>(
   if (pendingQueue !== null) {
     // We have new updates that haven't been processed yet.
     // We'll add them to the base queue.
+    // 之前有因为优先级未更新的 update 存在 存在 baseQueue 中
+    // 把环状链表 queue.pending 剪开接在 baseQueue 的后面
     if (baseQueue !== null) {
       // Merge the pending queue and the base queue.
       const baseFirst = baseQueue.next;
@@ -1106,6 +1148,7 @@ function updateReducer<S, I, A>(
 
   if (baseQueue !== null) {
     // We have a queue to process.
+    // 循环更新队列 更新新的 state
     const first = baseQueue.next;
     let newState = current.baseState;
 
@@ -1179,6 +1222,7 @@ function updateReducer<S, I, A>(
           // we can use the eagerly computed state
           newState = ((update.eagerState: any): S);
         } else {
+          // 更新新的 state
           newState = reducer(newState, action);
         }
       }
@@ -1197,6 +1241,7 @@ function updateReducer<S, I, A>(
       markWorkInProgressReceivedUpdate();
     }
 
+    // 更新完后的数据更新到 hook 上
     hook.memoizedState = newState;
     hook.baseState = newBaseState;
     hook.baseQueue = newBaseQueueLast;
@@ -2551,6 +2596,9 @@ function refreshCache<T>(fiber: Fiber, seedKey: ?() => T, seedValue: T) {
   // TODO: Warn if unmounted?
 }
 
+// fiber：当前 render 到 的 fiber 节点
+// queue：更新队列
+// action：用户传入的 比如setNum({type: 'add'}) 就是 {type: 'add'}
 function dispatchReducerAction<S, A>(
   fiber: Fiber,
   queue: UpdateQueue<S, A>,
@@ -2568,6 +2616,7 @@ function dispatchReducerAction<S, A>(
 
   const lane = requestUpdateLane(fiber);
 
+  // 环状链表内部的 update 对象
   const update: Update<S, A> = {
     lane,
     action,
@@ -2577,6 +2626,7 @@ function dispatchReducerAction<S, A>(
   };
 
   if (isRenderPhaseUpdate(fiber)) {
+    // 构建环状链表
     enqueueRenderPhaseUpdate(queue, update);
   } else {
     const root = enqueueConcurrentHookUpdate(fiber, queue, update, lane);
@@ -2680,6 +2730,7 @@ function isRenderPhaseUpdate(fiber: Fiber) {
   );
 }
 
+// 构建 Update 对象的环状链表
 function enqueueRenderPhaseUpdate<S, A>(
   queue: UpdateQueue<S, A>,
   update: Update<S, A>,

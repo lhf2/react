@@ -139,6 +139,7 @@ function renderSubtreeIntoContainer(
   );
 }
 
+// 整个应用的入口文件
 function createRoot(
   container: Element | Document | DocumentFragment,
   options?: CreateRootOptions,

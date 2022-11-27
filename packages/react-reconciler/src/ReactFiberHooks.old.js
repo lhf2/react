@@ -1806,6 +1806,8 @@ function forceStoreRerender(fiber) {
   }
 }
 
+// useState 的实现跟 useReducer 差不多
+// useState 其实是预设 reducer 的 useReducer
 function mountState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {

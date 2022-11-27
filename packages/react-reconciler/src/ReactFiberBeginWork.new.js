@@ -1890,6 +1890,7 @@ function mountIndeterminateComponent(
     hasId = checkDidRenderIdHook();
     setIsRendering(false);
   } else {
+    // hooks 入口
     value = renderWithHooks(
       null,
       workInProgress,
@@ -4020,6 +4021,7 @@ function beginWork(
   workInProgress.lanes = NoLanes;
 
   switch (workInProgress.tag) {
+    // 不知道是函数组件还是类组件
     case IndeterminateComponent: {
       return mountIndeterminateComponent(
         current,
