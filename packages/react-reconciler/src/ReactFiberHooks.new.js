@@ -367,6 +367,7 @@ function throwInvalidHookError() {
   );
 }
 
+// 判断前后的 deps 是否相等
 function areHookInputsEqual(
   nextDeps: Array<mixed>,
   prevDeps: Array<mixed> | null,
@@ -1890,6 +1891,15 @@ function rerenderState<S>(
   return rerenderReducer(basicStateReducer, (initialState: any));
 }
 
+// mount 的时候 destroy 为 undefined
+/**
+ * 
+ * @param {*} tag : hookFlags
+ * @param {*} create：用户传入的函数
+ * @param {*} destroy：销毁函数
+ * @param {*} deps：依赖项
+ * @returns 
+ */
 function pushEffect(tag, create, destroy, deps: Array<mixed> | void | null) {
   const effect: Effect = {
     tag,
@@ -2018,6 +2028,7 @@ function mountEffectImpl(
   const hook = mountWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
   currentlyRenderingFiber.flags |= fiberFlags;
+  // memoizedState 保存包含useEffect回调函数(create)、依赖项(nextDeps)等的链表数据结构effect
   hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     create,
@@ -2037,10 +2048,12 @@ function updateEffectImpl(
   let destroy = undefined;
 
   if (currentHook !== null) {
+    // 取出之前 effect 的销毁函数
     const prevEffect = currentHook.memoizedState;
     destroy = prevEffect.destroy;
     if (nextDeps !== null) {
       const prevDeps = prevEffect.deps;
+      // 判断前后 deps 是否相等
       if (areHookInputsEqual(nextDeps, prevDeps)) {
         hook.memoizedState = pushEffect(hookFlags, create, destroy, nextDeps);
         return;
@@ -2632,6 +2645,7 @@ function dispatchReducerAction<S, A>(
     const root = enqueueConcurrentHookUpdate(fiber, queue, update, lane);
     if (root !== null) {
       const eventTime = requestEventTime();
+      // 开启调度
       scheduleUpdateOnFiber(root, fiber, lane, eventTime);
       entangleTransitionUpdate(root, queue, lane);
     }
@@ -2738,6 +2752,7 @@ function enqueueRenderPhaseUpdate<S, A>(
   // This is a render phase update. Stash it in a lazily-created map of
   // queue -> linked list of updates. After this render pass, we'll restart
   // and apply the stashed updates on top of the work-in-progress hook.
+  // render 阶段的更新
   didScheduleRenderPhaseUpdateDuringThisPass = didScheduleRenderPhaseUpdate = true;
   const pending = queue.pending;
   if (pending === null) {

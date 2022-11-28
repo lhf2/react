@@ -2807,6 +2807,8 @@ function commitRootImpl(
     // The first phase a "before mutation" phase. We use this phase to read the
     // state of the host tree right before we mutate it. This is where
     // getSnapshotBeforeUpdate is called.
+    // beforeMutation阶段的处理函数：commitBeforeMutationEffects内部，
+    // 异步调度useEffect
     const shouldFireAfterActiveInstanceBlur = commitBeforeMutationEffects(
       root,
       finishedWork,
@@ -3112,7 +3114,9 @@ export function flushPassiveEffects(): boolean {
 
     try {
       ReactCurrentBatchConfig.transition = null;
+      // 设置优先级
       setCurrentUpdatePriority(priority);
+      // 关键函数
       return flushPassiveEffectsImpl();
     } finally {
       setCurrentUpdatePriority(previousPriority);
@@ -3177,7 +3181,10 @@ function flushPassiveEffectsImpl() {
   const prevExecutionContext = executionContext;
   executionContext |= CommitContext;
 
+
+  // 执行所有 useEffect 的销毁函数，调用该 useEffect 在上一次 render 时的销毁函数
   commitPassiveUnmountEffects(root.current);
+  // 执行所有 useEffect 的回调函数，调用该 useEffect 在本次 render 时的回调函数
   commitPassiveMountEffects(root, root.current, lanes, transitions);
 
   // TODO: Move to commitPassiveMountEffects

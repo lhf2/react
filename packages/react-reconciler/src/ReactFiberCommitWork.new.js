@@ -553,6 +553,7 @@ function commitHookEffectListUnmount(
   if (lastEffect !== null) {
     const firstEffect = lastEffect.next;
     let effect = firstEffect;
+    // 遍历 effectList
     do {
       if ((effect.tag & flags) === flags) {
         // Unmount
@@ -572,6 +573,7 @@ function commitHookEffectListUnmount(
               setIsRunningInsertionEffect(true);
             }
           }
+          // 调用 Destroy
           safelyCallDestroy(finishedWork, nearestMountedAncestor, destroy);
           if (__DEV__) {
             if ((flags & HookInsertion) !== NoHookEffect) {
@@ -609,7 +611,7 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
           }
         }
 
-        // Mount
+        // Mount 执行函数，并获取 destory 放在 effect 上
         const create = effect.create;
         if (__DEV__) {
           if ((flags & HookInsertion) !== NoHookEffect) {
