@@ -149,10 +149,13 @@ export type UpdateQueue<State> = {
   shared: SharedQueue<State>,
   callbacks: Array<() => mixed> | null,
 };
-
+// 1，默认情况：通过ReactDOM.createRoot或者this.setState触发
 export const UpdateState = 0;
+// 2，在classCompont组件生命周期函数中使用this.setState触发更新
 export const ReplaceState = 1;
+// 3，通过this.forceUpdate触发
 export const ForceUpdate = 2;
+// 4，发生错误的情况下在classComponent或者HostRoot中触发更新
 export const CaptureUpdate = 3;
 
 // Global state that is reset at the beginning of calling `processUpdateQueue`.
@@ -171,9 +174,11 @@ if (__DEV__) {
   };
 }
 
+// 初始化一个Fiber对象的updateQueue属性
 export function initializeUpdateQueue<State>(fiber: Fiber): void {
+  // 创建一个更新队列对象
   const queue: UpdateQueue<State> = {
-    baseState: fiber.memoizedState,
+    baseState: fiber.memoizedState, // 初始state数据
     firstBaseUpdate: null,
     lastBaseUpdate: null,
     shared: {
@@ -183,6 +188,7 @@ export function initializeUpdateQueue<State>(fiber: Fiber): void {
     },
     callbacks: null,
   };
+  // 设置更新队列对象
   fiber.updateQueue = queue;
 }
 
@@ -205,30 +211,37 @@ export function cloneUpdateQueue<State>(
   }
 }
 
+// 创建更新对象
 export function createUpdate(lane: Lane): Update<mixed> {
+  // 定义update对象
   const update: Update<mixed> = {
-    lane,
+    lane, // 更新优先级
 
-    tag: UpdateState,
-    payload: null,
-    callback: null,
+    tag: UpdateState, // 不同的tag对应不同的更新场景
+    payload: null, // 更新的内容   == fun组件用action字段
+    callback: null, // 回调函数
 
-    next: null,
+    next: null, // 链表形式：指向下一个更新的对象【保证了update之间的顺序】
   };
+  // 返回创建的update对象
   return update;
 }
 
 export function enqueueUpdate<State>(
-  fiber: Fiber,
-  update: Update<State>,
-  lane: Lane,
+  fiber: Fiber, // 要更新的节点 ，当前也就是hostFiber
+  update: Update<State>, // 更新对象
+  lane: Lane, // 更新的优先级
 ): FiberRoot | null {
+  // 取出当前Fiber节点的updateQueue属性
   const updateQueue = fiber.updateQueue;
   if (updateQueue === null) {
     // Only occurs if the fiber has been unmounted.
+    // 表明当前节点已经被卸载
     return null;
   }
 
+  // 一个Fiber节点会先初始化updateQueue属性，后创建Update对象
+  // 取出updateQueue.shared对象 { lanes: 0, pending: null }
   const sharedQueue: SharedQueue<State> = (updateQueue: any).shared;
 
   if (__DEV__) {
@@ -248,6 +261,7 @@ export function enqueueUpdate<State>(
     }
   }
 
+  // 判断当前是否为不安全的渲染阶段 更新
   if (isUnsafeClassRenderPhaseUpdate(fiber)) {
     // This is an unsafe render phase update. Add directly to the update
     // queue so we can process it immediately during the current render.
@@ -267,6 +281,7 @@ export function enqueueUpdate<State>(
     // currently renderings (a pattern that is accompanied by a warning).
     return unsafe_markUpdateLaneFromFiberToRoot(fiber, lane);
   } else {
+    // 默认是处于安全的渲染阶段更新：讲update对象添加到queue之中
     return enqueueConcurrentClassUpdate(fiber, sharedQueue, update, lane);
   }
 }

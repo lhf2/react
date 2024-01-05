@@ -54,22 +54,22 @@ function FiberRootNode(
   onRecoverableError: any,
   formState: ReactFormState<any, any> | null,
 ) {
-  this.tag = tag;
-  this.containerInfo = containerInfo;
+  this.tag = tag; // 应用模式：1 表示并发渲染模式
+  this.containerInfo = containerInfo; // 存储#root dom对象
   this.pendingChildren = null;
-  this.current = null;
+  this.current = null; // 这个属性指向Current Fiber Tree的根节点 也就是HostFiberRoot
   this.pingCache = null;
-  this.finishedWork = null;
+  this.finishedWork = null; // 存储创建完成的FiberTree
   this.timeoutHandle = noTimeout;
   this.cancelPendingCommit = null;
   this.context = null;
   this.pendingContext = null;
   this.next = null;
-  this.callbackNode = null;
-  this.callbackPriority = NoLane;
+  this.callbackNode = null; // 回调节点，存储当前任务task
+  this.callbackPriority = NoLane; // 回调任务优先级
   this.expirationTimes = createLaneMap(NoTimestamp);
 
-  this.pendingLanes = NoLanes;
+  this.pendingLanes = NoLanes;  // 默认 0
   this.suspendedLanes = NoLanes;
   this.pingedLanes = NoLanes;
   this.expiredLanes = NoLanes;
@@ -130,6 +130,7 @@ function FiberRootNode(
   }
 }
 
+// 创建root应用根节点对象
 export function createFiberRoot(
   containerInfo: Container,
   tag: RootTag,
@@ -148,9 +149,10 @@ export function createFiberRoot(
   formState: ReactFormState<any, any> | null,
 ): FiberRoot {
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
+  // 创建root应用根节点对象 【FiberRootNode】
   const root: FiberRoot = (new FiberRootNode(
     containerInfo,
-    tag,
+    tag, // 1
     hydrate,
     identifierPrefix,
     onRecoverableError,
@@ -166,12 +168,17 @@ export function createFiberRoot(
 
   // Cyclic construction. This cheats the type system right now because
   // stateNode is any.
+  // 创建一个FiberNode对象【HostRootFiber】，它是Fiber树的根节点，非常重要
   const uninitializedFiber = createHostRootFiber(
     tag,
     isStrictMode,
     concurrentUpdatesByDefaultOverride,
   );
+
+  // 【关联起来，以便在后续的渲染过程中能够正确地处理该组件树的更新和重新渲染。】
+  // 将root应用根节点对象的current属性 指向了当前Current Fiber Tree组件树的根节点【HostRootFiber】
   root.current = uninitializedFiber;
+  // 然后将HostFiber.stateNode属性值：设置为root应用根节点对象
   uninitializedFiber.stateNode = root;
 
   if (enableCache) {
@@ -199,10 +206,12 @@ export function createFiberRoot(
       isDehydrated: hydrate,
       cache: (null: any), // not enabled yet
     };
+    // 初始化数据
     uninitializedFiber.memoizedState = initialState;
   }
 
+  // 初始化HostRootFiber根节点对象的updateQueue属性
   initializeUpdateQueue(uninitializedFiber);
-
+  // 返回root应用根节点对象【容器】
   return root;
 }

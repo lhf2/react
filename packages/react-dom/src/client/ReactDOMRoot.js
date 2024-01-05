@@ -94,9 +94,11 @@ const defaultOnRecoverableError =
 
 // $FlowFixMe[missing-this-annot]
 function ReactDOMRoot(internalRoot: FiberRoot) {
+  // 存储应用根节点[FiberRootNode]
   this._internalRoot = internalRoot;
 }
 
+// 原型方法
 // $FlowFixMe[prop-missing] found when upgrading Flow
 ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
   // $FlowFixMe[missing-this-annot]
@@ -124,6 +126,19 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
         );
       }
     }
+
+    // 开始加载react应用 children为App根组件, root为应用根节点对象FiberRootNode
+    /**
+     * react组件都会被转换为react-element对象:
+     * {
+     *    $$typeof: Symbol(react.element),
+     *    key: null,
+     *    props: {},
+     *    ref: null,
+     *    type: fun App() {}
+     * }
+     * 
+     */
     updateContainer(children, root, null, null);
   };
 
@@ -163,12 +178,21 @@ export function createRoot(
   container: Element | Document | DocumentFragment,
   options?: CreateRootOptions,
 ): RootType {
+
+  // container: 默认是#root dom元素
+  // 校验container是否为合法的dom元素
   if (!isValidContainer(container)) {
     throw new Error('createRoot(...): Target container is not a DOM element.');
   }
 
+  // 开发环境校验警告
   warnIfReactDOMContainerInDEV(container);
 
+  // 默认严格模式为false 
+  // react18默认没有开启严格模式，需要自己使用<StrictMode> 组件包裹App根组件，才能开启整个应用的严格模式。
+  // <StrictMode>
+  //   <App />
+  // </StrictMode>
   let isStrictMode = false;
   let concurrentUpdatesByDefaultOverride = false;
   let identifierPrefix = '';
@@ -217,9 +241,11 @@ export function createRoot(
     }
   }
 
+  // 创建 root 应用根节点对象,为 FiberRootNode 类型;
+  // 注：ConcurrentRoot 为1，代表了v18版本的并发渲染模式
   const root = createContainer(
     container,
-    ConcurrentRoot,
+    ConcurrentRoot, // 1 默认开启并发模式
     null,
     isStrictMode,
     concurrentUpdatesByDefaultOverride,
@@ -227,6 +253,8 @@ export function createRoot(
     onRecoverableError,
     transitionCallbacks,
   );
+
+   // 给#root DOM元素设置一个内部属性，存储root.current 即HostFiber对象
   markContainerAsRoot(root.current, container);
   Dispatcher.current = ReactDOMClientDispatcher;
 
@@ -234,9 +262,12 @@ export function createRoot(
     container.nodeType === COMMENT_NODE
       ? (container.parentNode: any)
       : container;
+  
+  // 监听[#root dom元素]的所有事件
   listenToAllSupportedEvents(rootContainerElement);
 
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
+  // 创建ReactDOMRoot实例对象并返回 将root应用根节点对象 存储为ReactDOM的内部对象
   return new ReactDOMRoot(root);
 }
 

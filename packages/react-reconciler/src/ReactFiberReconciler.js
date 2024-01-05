@@ -242,6 +242,11 @@ function findHostInstanceWithWarning(
   return findHostInstance(component);
 }
 
+// 创建FiberRootNode应用根节点对象。
+// 创建HostFiber虚拟DOM树根节点对象。
+// 关联两个对象，可以互相访问。
+// 初始化HostFiber的updateQueue属性。
+// 返回FiberRootNode节点。
 export function createContainer(
   containerInfo: Container,
   tag: RootTag,
@@ -252,6 +257,7 @@ export function createContainer(
   onRecoverableError: (error: mixed) => void,
   transitionCallbacks: null | TransitionTracingCallbacks,
 ): OpaqueRoot {
+  // hydrate代表ssr，默认为false
   const hydrate = false;
   const initialChildren = null;
   return createFiberRoot(
@@ -318,6 +324,12 @@ export function createHydrationContainer(
   return root;
 }
 
+// 加载应用：触发调度更新任务
+
+// 获取更新优先级lane，也就是生成一个本次更新对应的lane。
+// 创建update更新对象 。
+// 将update更新对象添加到目标Fiber对象的更新队列中。
+// 开启一个新的调度更新任务。
 export function updateContainer(
   element: ReactNodeList,
   container: OpaqueRoot,
@@ -327,17 +339,24 @@ export function updateContainer(
   if (__DEV__) {
     onScheduleRoot(container, element);
   }
+
+  // 取出current对象,为HostFiber 【它是当前Fiber树的根节点】
   const current = container.current;
+  // 获取更新优先级lane
   const lane = requestUpdateLane(current);
 
   if (enableSchedulingProfiler) {
     markRenderScheduled(lane);
   }
 
+  // 获取父组件的上下文,因为 parentComponent 为 null,所以这里 context 为空对象
   const context = getContextForSubtree(parentComponent);
   if (container.context === null) {
+    // 从null变为{}
+    // 如果容器的上下文为null， 则把父级上下文赋值
     container.context = context;
   } else {
+    // 如果容器存在上下文，则把父级的上下文设置为等待处理的上下文
     container.pendingContext = context;
   }
 
@@ -358,12 +377,15 @@ export function updateContainer(
     }
   }
 
+  // 创建一个update更新对象
   const update = createUpdate(lane);
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 将更新对象的 payload 属性设置为App根组件的内容，【即：本次应用加载的内容为App根组件】
   update.payload = {element};
-
+  // 本来就没有，设置完还是null
   callback = callback === undefined ? null : callback;
+  // 检查回调函数 callback 是否为空，如果不为空，则将其添加到更新对象的 callback 属性中
   if (callback !== null) {
     if (__DEV__) {
       if (typeof callback !== 'function') {
@@ -377,8 +399,10 @@ export function updateContainer(
     update.callback = callback;
   }
 
+  // 将更新对象update：添加到当前current对象的更新队列中
   const root = enqueueUpdate(current, update, lane);
   if (root !== null) {
+    // 开启一个新的调度更新任务
     scheduleUpdateOnFiber(root, current, lane);
     entangleTransitions(root, current, lane);
   }

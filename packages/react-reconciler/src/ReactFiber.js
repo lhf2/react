@@ -140,37 +140,44 @@ function FiberNode(
   mode: TypeOfMode,
 ) {
   // Instance
-  this.tag = tag;
-  this.key = key;
-  this.elementType = null;
-  this.type = null;
+  this.tag = tag; // 节点类型，非常重要，不同的值代表不同的节点对象
+  this.key = key; // 节点key
+  this.elementType = null; // 大部分情况同type，存储组件对象Element
+  this.type = null; // 组件原始定义
+  // 存储FiberNode对象对应的dom元素【hostCompoent】，
+  // 函数组件此属性无值，
+  // 类组件此属性存储的是组件实例instance
   this.stateNode = null;
 
-  // Fiber
-  this.return = null;
-  this.child = null;
-  this.sibling = null;
+  // FiberNode节点之间的链接
+  this.return = null; // 指向父级节点对象FiberNode
+  this.child = null; // 指向第一个子节点FiberNode
+  this.sibling = null; // 指向下一个兄弟节点FiberNode
   this.index = 0;
 
-  this.ref = null;
+  this.ref = null; // ref引用
   this.refCleanup = null;
 
-  this.pendingProps = pendingProps;
-  this.memoizedProps = null;
-  this.updateQueue = null;
-  this.memoizedState = null;
+  // hooks相关
+  this.pendingProps = pendingProps; // 新的，等待处理的props
+  this.memoizedProps = null; // 旧的，上一次存储的props
+  this.updateQueue = null; // 存储update更新对象链表
+  this.memoizedState = null; // 类组件：旧的，上一次存储的state; 函数组件：存储hook链表
   this.dependencies = null;
 
-  this.mode = mode;
+  this.mode = mode; // 存储的是当前应用渲染模式：默认是concurrent mode
 
   // Effects
+  // 各种effect副作用相关的执行标记
   this.flags = NoFlags;
-  this.subtreeFlags = NoFlags;
-  this.deletions = null;
+  this.subtreeFlags = NoFlags; // 子树节点的副作用标记，默认无副作用
+  this.deletions = null; // 删除标记
 
-  this.lanes = NoLanes;
-  this.childLanes = NoLanes;
+  // 优先级调度，默认为0
+  this.lanes = NoLanes; // 节点自身的更新Lanes
+  this.childLanes = NoLanes; // 子树节点的更新lanes
 
+  // 这个属性指向另外一个缓冲区对应的FiberNode
   this.alternate = null;
 
   if (enableProfilerTimer) {
@@ -232,6 +239,7 @@ function createFiber(
   key: null | string,
   mode: TypeOfMode,
 ): Fiber {
+  // 创建FiberNode实例对象
   // $FlowFixMe[invalid-constructor]: the shapes are exact here but Flow doesn't like constructors
   return new FiberNode(tag, pendingProps, key, mode);
 }
@@ -448,8 +456,9 @@ export function resetWorkInProgress(
   return workInProgress;
 }
 
+// hostFiber
 export function createHostRootFiber(
-  tag: RootTag,
+  tag: RootTag, // 1
   isStrictMode: boolean,
   concurrentUpdatesByDefaultOverride: null | boolean,
 ): Fiber {
@@ -482,6 +491,7 @@ export function createHostRootFiber(
     mode |= ProfileMode;
   }
 
+  // 创建Fiber对象 tag为3即代表HostRoot节点 
   return createFiber(HostRoot, null, null, mode);
 }
 

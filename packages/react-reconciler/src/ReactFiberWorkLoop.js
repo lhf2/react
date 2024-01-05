@@ -611,10 +611,12 @@ export function getCurrentTime(): number {
   return now();
 }
 
+// 获取更新优先级lane
 export function requestUpdateLane(fiber: Fiber): Lane {
   // Special cases
   const mode = fiber.mode;
   if ((mode & ConcurrentMode) === NoMode) {
+    // 1，模式为0时，返回同步优先级
     return (SyncLane: Lane);
   } else if (
     (executionContext & RenderContext) !== NoContext &&
@@ -629,10 +631,12 @@ export function requestUpdateLane(fiber: Fiber): Lane {
     // This behavior is only a fallback. The flag only exists until we can roll
     // out the setState warning, since existing code might accidentally rely on
     // the current behavior.
+    // 2，render阶段产生的update【比如调用fun()组件的过程中又触发了更新】，返回render阶段进行中最高的优先级
     return pickArbitraryLane(workInProgressRootRenderLanes);
   }
 
   const isTransition = requestCurrentTransition() !== NoTransition;
+  // 3，Transition相关优先级：如果当前不是渲染上下文，并且请求的更新是过渡（transition），则进入下一个条件。
   if (isTransition) {
     if (__DEV__ && ReactCurrentBatchConfig.transition !== null) {
       const transition = ReactCurrentBatchConfig.transition;
@@ -659,8 +663,10 @@ export function requestUpdateLane(fiber: Fiber): Lane {
   // The opaque type returned by the host config is internally a lane, so we can
   // use that directly.
   // TODO: Move this type conversion to the event priority module.
+  // 4，使用手动设置的优先级：获取当前更新通道优先级 ：默认为0
   const updateLane: Lane = (getCurrentUpdatePriority(): any);
   if (updateLane !== NoLane) {
+    // 只要更新通道不等于0，则返回有效的更新通道
     return updateLane;
   }
 
@@ -670,6 +676,7 @@ export function requestUpdateLane(fiber: Fiber): Lane {
   // The opaque type returned by the host config is internally a lane, so we can
   // use that directly.
   // TODO: Move this type conversion to the event priority module.
+  // 5，获取当前事件级的优先级： 默认为16
   const eventLane: Lane = (getCurrentEventPriority(): any);
   return eventLane;
 }

@@ -372,20 +372,27 @@ function scheduleTaskForRootDuringMicrotask(
       cancelCallback(existingCallbackNode);
     }
 
+    // 从React到Scheduler的优先级转换
     let schedulerPriorityLevel;
+    // lanes转换成事件优先级，匹配符合的事件优先级，然后赋值对应的scheduler的优先级
     switch (lanesToEventPriority(nextLanes)) {
+      // 同步优先级
       case DiscreteEventPriority:
         schedulerPriorityLevel = ImmediateSchedulerPriority;
         break;
+      // 连续事件优先级
       case ContinuousEventPriority:
         schedulerPriorityLevel = UserBlockingSchedulerPriority;
         break;
+      // 默认事件优先级
       case DefaultEventPriority:
         schedulerPriorityLevel = NormalSchedulerPriority;
         break;
+      // 空闲事件优先级
       case IdleEventPriority:
         schedulerPriorityLevel = IdleSchedulerPriority;
         break;
+      // 默认
       default:
         schedulerPriorityLevel = NormalSchedulerPriority;
         break;

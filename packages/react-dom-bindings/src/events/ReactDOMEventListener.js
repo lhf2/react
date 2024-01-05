@@ -370,6 +370,8 @@ export function getEventPriority(domEventName: DOMEventName): EventPriority {
       // We might be in the Scheduler callback.
       // Eventually this mechanism will be replaced by a check
       // of the current priority on the native scheduler.
+      // 从Scheduler到React的优先级转换
+      // 获取当前调度的优先级，然后根据优先级匹配到对应的优先级，最后返回对应的事件优先级
       const schedulerPriority = getCurrentSchedulerPriorityLevel();
       switch (schedulerPriority) {
         case ImmediateSchedulerPriority:
