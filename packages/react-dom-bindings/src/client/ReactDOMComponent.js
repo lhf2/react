@@ -1024,7 +1024,7 @@ export function setInitialProperties(
   }
 
   // TODO: Make sure that we check isMounted before firing any of these events.
-
+  // 针对一些特殊的DOM元素，添加默认事件绑定
   switch (tag) {
     case 'div':
     case 'span':

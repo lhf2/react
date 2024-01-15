@@ -382,9 +382,11 @@ function createChildReconciler(
     }
   }
 
+  // place插入操作（给新建的Fiber节点设置flags属性值为Placement）
   function placeSingleChild(newFiber: Fiber): Fiber {
     // This is simpler for the single child case. We only need to do a
     // placement for inserting new children.
+    // 新建的Fiber节点alternate都是null
     if (shouldTrackSideEffects && newFiber.alternate === null) {
       newFiber.flags |= Placement | PlacementDEV;
     }
@@ -832,6 +834,7 @@ function createChildReconciler(
     return knownKeys;
   }
 
+  // 多个子节点创建
   function reconcileChildrenArray(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -866,9 +869,11 @@ function createChildReconciler(
       }
     }
 
+    // 结果child
     let resultingFirstChild: Fiber | null = null;
+    // 上一个新建的child
     let previousNewFiber: Fiber | null = null;
-
+    // 旧的Fiber节点
     let oldFiber = currentFirstChild;
     let lastPlacedIndex = 0;
     let newIdx = 0;
@@ -928,6 +933,8 @@ function createChildReconciler(
       return resultingFirstChild;
     }
 
+    // 初次加载的情况：
+    // 多子节点的 创建：创建第一个的child，完成之后退出创建，返回resultingFirstChild结果为第一个child
     if (oldFiber === null) {
       // If we don't have any more existing children we can choose a fast path
       // since the rest will all be insertions.
@@ -937,18 +944,23 @@ function createChildReconciler(
           continue;
         }
         lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+        // previousNewFiber === null，表示为第一次循环：
         if (previousNewFiber === null) {
           // TODO: Move out of the loop. This only happens for the first run.
+          // 设置第一个新建的Fiber节点, 为最后返回的child内容
           resultingFirstChild = newFiber;
         } else {
+          // 否则表示不是第一次循环，将新建的节点设置为上一个节点的兄弟节点
           previousNewFiber.sibling = newFiber;
         }
+         // 更新上一个新的节点
         previousNewFiber = newFiber;
       }
       if (getIsHydrating()) {
         const numberOfForks = newIdx;
         pushTreeFork(returnFiber, numberOfForks);
       }
+      // 退出当前函数，返回创建完成的第一个child
       return resultingFirstChild;
     }
 
@@ -1233,6 +1245,7 @@ function createChildReconciler(
   ): Fiber {
     const key = element.key;
     let child = currentFirstChild;
+    // 更新处理 【单节点diff】
     while (child !== null) {
       // TODO: If key === null and child.key === null, then this only applies to
       // the first item in the list.
@@ -1282,10 +1295,12 @@ function createChildReconciler(
       } else {
         deleteChild(returnFiber, child);
       }
+      // 更新为兄弟节点：再次处理更新逻辑
       child = child.sibling;
     }
 
-    if (element.type === REACT_FRAGMENT_TYPE) {
+    // 创建处理
+    if (element.type === REACT_FRAGMENT_TYPE) { // 片段类型
       const created = createFiberFromFragment(
         element.props.children,
         returnFiber.mode,
@@ -1295,8 +1310,12 @@ function createChildReconciler(
       created.return = returnFiber;
       return created;
     } else {
-      const created = createFiberFromElement(element, returnFiber.mode, lanes);
+      // 其他类型
+      // # 根据React-element元素对象，创建FiberNode节点 
+      const created = createFiberFromElement(element, returnFiber.mode, lanes); // 父级阶段的mode
+      // 初始化处理ref对象
       created.ref = coerceRef(returnFiber, currentFirstChild, element);
+      // 设置App组件的FiberNode.return 指向hostFiberRoot根节点
       created.return = returnFiber;
       return created;
     }
@@ -1366,11 +1385,14 @@ function createChildReconciler(
     }
 
     // Handle object types
+    // 根据新的child类型，进行不同的处理
     if (typeof newChild === 'object' && newChild !== null) {
       switch (newChild.$$typeof) {
+        // 1，单个子节点处理
+        // 最常见的react-element元素类型：react中类组件，函数组件，普通dom组件都属于此类型
         case REACT_ELEMENT_TYPE:
           return placeSingleChild(
-            reconcileSingleElement(
+            (
               returnFiber,
               currentFirstChild,
               newChild,
@@ -1398,6 +1420,8 @@ function createChildReconciler(
           );
       }
 
+      // 2，数组节点的处理，即多个子节点，比如div.App下面有三个子节点
+      // 循环创建多个子节点，最后返回第一个子节点，firstChild
       if (isArray(newChild)) {
         return reconcileChildrenArray(
           returnFiber,
@@ -1458,6 +1482,7 @@ function createChildReconciler(
       throwOnInvalidObjectType(returnFiber, newChild);
     }
 
+    // 3，处理文本子节点
     if (
       (typeof newChild === 'string' && newChild !== '') ||
       typeof newChild === 'number'
@@ -1479,13 +1504,14 @@ function createChildReconciler(
     }
 
     // Remaining cases are all treated as empty.
+    // newChild为null时，表示没有子节点了，会返回一个null，由此一组beginWork工作执行完成，
     return deleteRemainingChildren(returnFiber, currentFirstChild);
   }
 
   function reconcileChildFibers(
-    returnFiber: Fiber,
-    currentFirstChild: Fiber | null,
-    newChild: any,
+    returnFiber: Fiber, // 父节点
+    currentFirstChild: Fiber | null, // 子节点
+    newChild: any, // 新的child内容
     lanes: Lanes,
   ): Fiber | null {
     // This indirection only exists so we can reset `thenableState` at the end.

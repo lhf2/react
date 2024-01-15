@@ -227,8 +227,10 @@ function appendAllChildren(
     // We only have the top Fiber that was created but we need recurse down its
     // children to find all the terminal nodes.
     let node = workInProgress.child;
+    // 有child才会处理，无child，说明自身就已经最下面的节点了
     while (node !== null) {
       if (node.tag === HostComponent || node.tag === HostText) {
+         // 添加子节点
         appendInitialChild(parent, node.stateNode);
       } else if (
         node.tag === HostPortal ||
@@ -256,6 +258,7 @@ function appendAllChildren(
       }
       // $FlowFixMe[incompatible-use] found when upgrading Flow
       node.sibling.return = node.return;
+      // 更新node 为兄弟节点
       node = node.sibling;
     }
   } else if (supportsPersistence) {
@@ -960,12 +963,14 @@ function completeWork(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ): Fiber | null {
+  // 取出新的props
   const newProps = workInProgress.pendingProps;
   // Note: This intentionally doesn't check if we're hydrating because comparing
   // to the current tree provider fiber is just as fast and less error-prone.
   // Ideally we would have a special version of the work loop only
   // for hydration.
   popTreeContext(workInProgress);
+  // 根据tag值，进行不同的逻辑处理
   switch (workInProgress.tag) {
     case IndeterminateComponent:
     case LazyComponent:
@@ -979,6 +984,7 @@ function completeWork(
     case MemoComponent:
       bubbleProperties(workInProgress);
       return null;
+    // 类组件
     case ClassComponent: {
       const Component = workInProgress.type;
       if (isLegacyContextProvider(Component)) {
@@ -987,6 +993,7 @@ function completeWork(
       bubbleProperties(workInProgress);
       return null;
     }
+    // 根节点的处理
     case HostRoot: {
       const fiberRoot = (workInProgress.stateNode: FiberRoot);
 
@@ -1242,10 +1249,13 @@ function completeWork(
       }
       // Fall through
     }
+    // 原生dom节点处理
     case HostComponent: {
       popHostContext(workInProgress);
+      // 获取dom元素类型 'div'
       const type = workInProgress.type;
       if (current !== null && workInProgress.stateNode != null) {
+        // 更新元素
         updateHostComponent(
           current,
           workInProgress,
@@ -1258,6 +1268,7 @@ function completeWork(
           markRef(workInProgress);
         }
       } else {
+        // 初次加载
         if (!newProps) {
           if (workInProgress.stateNode === null) {
             throw new Error(
@@ -1267,6 +1278,7 @@ function completeWork(
           }
 
           // This can happen when we abort work.
+          // props冒泡
           bubbleProperties(workInProgress);
           return null;
         }
@@ -1282,7 +1294,10 @@ function completeWork(
           // to consolidate.
           prepareToHydrateHostInstance(workInProgress, currentHostContext);
         } else {
+          // 获取#root 根元素
           const rootContainerInstance = getRootHostContainer();
+          // # 创建元素流程：
+          // 创建HostComponent类型的Fiber节点 对应的真实dom元素
           const instance = createInstance(
             type,
             newProps,
@@ -1292,12 +1307,16 @@ function completeWork(
           );
           // TODO: For persistent renderers, we should pass children as part
           // of the initial instance creation
+          // 添加子元素：将下一级的dom元素挂载到instance上面
+          // 【由于appendAllChildren方法的存在，当completeWork到hostFiber时，已经形成了一颗离屏的真实DOM树】
           appendAllChildren(instance, workInProgress, false, false);
+          // 在【div react源码解析】节点上: 存储它对应的真实dom内容
           workInProgress.stateNode = instance;
 
           // Certain renderers require commit-time effects for initial mount.
           // (eg DOM renderer supports auto-focus for certain elements).
           // Make sure such renderers get scheduled for later work.
+          // 执行finalizeInitialChildren方法，完成属性的初始化：styles,innerHTML, 文本类型的children
           if (
             finalizeInitialChildren(
               instance,
@@ -1311,10 +1330,12 @@ function completeWork(
         }
 
         if (workInProgress.ref !== null) {
+          // 标记绑定的ref
           // If there is a ref on a host node we need to schedule a callback
           markRef(workInProgress);
         }
       }
+      // props冒泡，将flags冒泡
       bubbleProperties(workInProgress);
 
       // This must come at the very end of the complete phase, because it might

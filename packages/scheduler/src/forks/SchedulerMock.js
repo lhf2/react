@@ -221,10 +221,13 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number): boolean {
       }
       const continuationCallback = callback(didUserCallbackTimeout);
       currentTime = getCurrentTime();
+      // performConcurrentWorkOnRoot函数
       if (typeof continuationCallback === 'function') {
         // If a continuation is returned, immediately yield to the main thread
         // regardless of how much time is left in the current time slice.
         // $FlowFixMe[incompatible-use] found when upgrading Flow
+        // 说明任务还未完成，将任务继续设置未当前任务的callback，等待下次继续执行
+        // 这里没有删除这个任务，则下次取出的第一个任务，还是这个任务，
         currentTask.callback = continuationCallback;
         if (enableProfiling) {
           // $FlowFixMe[incompatible-call] found when upgrading Flow
@@ -259,6 +262,7 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number): boolean {
   }
   // Return whether there's additional work
   if (currentTask !== null) {
+    // 还有工作，则会生成一个新的宏任务，在下次的宏任务中继续执行剩下的任务
     return true;
   } else {
     const firstTimer = peek(timerQueue);

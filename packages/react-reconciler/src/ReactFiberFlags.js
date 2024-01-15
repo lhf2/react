@@ -12,25 +12,25 @@ import {enableCreateEventHandleAPI} from 'shared/ReactFeatureFlags';
 export type Flags = number;
 
 // Don't change these values. They're used by React Dev Tools.
-export const NoFlags = /*                      */ 0b0000000000000000000000000000;
+export const NoFlags = /*                      */ 0b0000000000000000000000000000; 
 export const PerformedWork = /*                */ 0b0000000000000000000000000001;
-export const Placement = /*                    */ 0b0000000000000000000000000010;
+export const Placement = /*                    */ 0b0000000000000000000000000010; // 代表当前Fiber或者子孙Fiber存在需要插入或者移动的dom元素或者文本【hostComponent,hostText】
 export const DidCapture = /*                   */ 0b0000000000000000000010000000;
 export const Hydrating = /*                    */ 0b0000000000000001000000000000;
 
 // You can change the rest (and add more).
-export const Update = /*                       */ 0b0000000000000000000000000100;
+export const Update = /*                       */ 0b0000000000000000000000000100; // 1.触发class组件的mount/update生命周期钩子函数; 2.hostComponent发生属性变化; 3.hostText发生文本变化; 4.Fun组件定义了useLayoutEffect
 /* Skipped value:                                 0b0000000000000000000000001000; */
 
-export const ChildDeletion = /*                */ 0b0000000000000000000000010000;
-export const ContentReset = /*                 */ 0b0000000000000000000000100000;
-export const Callback = /*                     */ 0b0000000000000000000001000000;
+export const ChildDeletion = /*                */ 0b0000000000000000000000010000; // 子节点存在需要删除的dom或者文本【hostComponent,hostText】
+export const ContentReset = /*                 */ 0b0000000000000000000000100000; // 清空hostComponent，即DOM节点的文本内容
+export const Callback = /*                     */ 0b0000000000000000000001000000; // 调用this.setState时，传递了回调函数参数
 /* Used by DidCapture:                            0b0000000000000000000010000000; */
 
 export const ForceClientRender = /*            */ 0b0000000000000000000100000000;
-export const Ref = /*                          */ 0b0000000000000000001000000000;
-export const Snapshot = /*                     */ 0b0000000000000000010000000000;
-export const Passive = /*                      */ 0b0000000000000000100000000000;
+export const Ref = /*                          */ 0b0000000000000000001000000000; // ref引用的创建与更新
+export const Snapshot = /*                     */ 0b0000000000000000010000000000; // 触发class组件的getSnapshotBeforeUpdate方法【使用较少】
+export const Passive = /*                      */ 0b0000000000000000100000000000; // 触发函数组件的useEffect钩子
 /* Used by Hydrating:                             0b0000000000000001000000000000; */
 
 export const Visibility = /*                   */ 0b0000000000000010000000000000;

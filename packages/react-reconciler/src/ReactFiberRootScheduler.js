@@ -7,11 +7,11 @@
  * @flow
  */
 
-import type {FiberRoot} from './ReactInternalTypes';
-import type {Lane} from './ReactFiberLane';
-import type {PriorityLevel} from 'scheduler/src/SchedulerPriorities';
+import type { FiberRoot } from './ReactInternalTypes';
+import type { Lane } from './ReactFiberLane';
+import type { PriorityLevel } from 'scheduler/src/SchedulerPriorities';
 
-import {enableDeferRootSchedulingToMicrotask} from 'shared/ReactFeatureFlags';
+import { enableDeferRootSchedulingToMicrotask } from 'shared/ReactFeatureFlags';
 import {
   NoLane,
   NoLanes,
@@ -34,7 +34,7 @@ import {
   performConcurrentWorkOnRoot,
   performSyncWorkOnRoot,
 } from './ReactFiberWorkLoop';
-import {LegacyRoot} from './ReactRootTags';
+import { LegacyRoot } from './ReactRootTags';
 import {
   ImmediatePriority as ImmediateSchedulerPriority,
   UserBlockingPriority as UserBlockingSchedulerPriority,
@@ -58,7 +58,7 @@ import {
 } from './ReactFiberConfig';
 
 import ReactSharedInternals from 'shared/ReactSharedInternals';
-const {ReactCurrentActQueue} = ReactSharedInternals;
+const { ReactCurrentActQueue } = ReactSharedInternals;
 
 // A linked list of all the roots with pending work. In an idiomatic app,
 // there's only a single root, but we do support multi root apps, hence this
@@ -80,6 +80,7 @@ let isFlushingWork: boolean = false;
 
 let currentEventTransitionLane: Lane = NoLane;
 
+// 确保root应用根节点被调度
 export function ensureRootIsScheduled(root: FiberRoot): void {
   // This function is called whenever a root receives an update. It does two
   // things 1) it ensures the root is in the root schedule, and 2) it ensures
@@ -307,17 +308,21 @@ function scheduleTaskForRootDuringMicrotask(
 
   // Check if any lanes are being starved by other work. If so, mark them as
   // expired so we know to work on those next.
+  // 检查更新通道是否被其他任务占用
   markStarvedLanesAsExpired(root, currentTime);
 
   // Determine the next lanes to work on, and their priority.
   const workInProgressRoot = getWorkInProgressRoot();
   const workInProgressRootRenderLanes = getWorkInProgressRootRenderLanes();
+  // 基于 root.pendingLanes，计算出本次更新的批次 Lanes 
   const nextLanes = getNextLanes(
     root,
     root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
   );
 
+  // 取出现行存在的回调节点【即任务task】， 默认是null
   const existingCallbackNode = root.callbackNode;
+  // 如果优先级等于0 ，说明根节点没有可处理的回调，则退出任务调度
   if (
     // Check if there's nothing to work on
     nextLanes === NoLanes ||
@@ -351,9 +356,12 @@ function scheduleTaskForRootDuringMicrotask(
     return SyncLane;
   } else {
     // We use the highest priority lane to represent the priority of the callback.
+    // 检查现在的优先级
     const existingCallbackPriority = root.callbackPriority;
+    // 获取lanes批次集合中最高优先级的lane，作为为本次回调任务的优先级
     const newCallbackPriority = getHighestPriorityLane(nextLanes);
 
+    // 判断新的优先级与当前任务优先级是否相等
     if (
       newCallbackPriority === existingCallbackPriority &&
       // Special case related to `act`. If the currently scheduled task is a
@@ -365,6 +373,8 @@ function scheduleTaskForRootDuringMicrotask(
         existingCallbackNode !== fakeActCallbackNode
       )
     ) {
+      // 如果相同，则表示优先级无变化，可以重用当前任务
+      // 这种情况一般出现在：多个状态触发的更新，可以共用一个调度任务，不会发起新的调度
       // The priority hasn't changed. We can reuse the existing task.
       return newCallbackPriority;
     } else {

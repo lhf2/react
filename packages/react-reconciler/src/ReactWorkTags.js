@@ -37,22 +37,22 @@ export type WorkTag =
   | 26
   | 27;
 
-export const FunctionComponent = 0;
-export const ClassComponent = 1;
-export const IndeterminateComponent = 2; // Before we know whether it is function or class
-export const HostRoot = 3; // Root of a host tree. Could be nested inside another node.
+export const FunctionComponent = 0; // 函数组件
+export const ClassComponent = 1; // 类组件
+export const IndeterminateComponent = 2; // Before we know whether it is function or class // 待定的类型 
+export const HostRoot = 3; // Root of a host tree. Could be nested inside another node. // 根节点类型
 export const HostPortal = 4; // A subtree. Could be an entry point to a different renderer.
-export const HostComponent = 5;
-export const HostText = 6;
-export const Fragment = 7;
+export const HostComponent = 5; // 指的是原生dom 标签元素
+export const HostText = 6; // 文本类型
+export const Fragment = 7; // 片段
 export const Mode = 8;
 export const ContextConsumer = 9;
 export const ContextProvider = 10;
-export const ForwardRef = 11;
+export const ForwardRef = 11; // forwardRef组件
 export const Profiler = 12;
 export const SuspenseComponent = 13;
-export const MemoComponent = 14;
-export const SimpleMemoComponent = 15;
+export const MemoComponent = 14; // memo组件
+export const SimpleMemoComponent = 15; // sinpleMemo组件
 export const LazyComponent = 16;
 export const IncompleteClassComponent = 17;
 export const DehydratedFragment = 18;

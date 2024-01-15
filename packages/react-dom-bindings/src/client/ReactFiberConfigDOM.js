@@ -406,10 +406,12 @@ export function createInstance(
     hostContextProd = (hostContext: any);
   }
 
+  // 获取Document对象
   const ownerDocument = getOwnerDocumentFromRootContainer(
     rootContainerInstance,
   );
 
+  // 创建dom元素实例
   let domElement: Instance;
   switch (hostContextProd) {
     case HostContextNamespaceSvg:
@@ -476,6 +478,7 @@ export function createInstance(
             // Separate else branch instead of using `props.is || undefined` above because of a Firefox bug.
             // See discussion in https://github.com/facebook/react/pull/6896
             // and discussion in https://bugzilla.mozilla.org/show_bug.cgi?id=1276240
+            // # 常规的dom元素
             domElement = ownerDocument.createElement(type);
           }
 
@@ -510,8 +513,11 @@ export function createInstance(
         }
       }
   }
+  // 将当前的Fiber节点存储到domElement元素上
   precacheFiberNode(internalInstanceHandle, domElement);
+  // 更新fiber节点的props
   updateFiberProps(domElement, props);
+  // 返回dom元素
   return domElement;
 }
 
@@ -528,6 +534,7 @@ export function finalizeInitialChildren(
   props: Props,
   hostContext: HostContext,
 ): boolean {
+  // 初始化dom属性【重点】
   setInitialProperties(domElement, type, props);
   switch (type) {
     case 'button':

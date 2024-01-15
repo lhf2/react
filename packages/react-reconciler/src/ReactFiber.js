@@ -504,16 +504,21 @@ export function createFiberFromTypeAndProps(
   mode: TypeOfMode,
   lanes: Lanes,
 ): Fiber {
+  // 设置初始的fiber节点tag
   let fiberTag = IndeterminateComponent;
   // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
   let resolvedType = type;
+  // 根据元素的type进行不同的逻辑处理，class也是函数
   if (typeof type === 'function') {
+    // 针对类组件的特殊处理
     if (shouldConstruct(type)) {
+      // 根据type 设置fiberTag 为class组件
       fiberTag = ClassComponent;
       if (__DEV__) {
         resolvedType = resolveClassForHotReloading(resolvedType);
       }
     } else {
+      // 普通函数组件，没有更新tag【重要，伏笔】
       if (__DEV__) {
         resolvedType = resolveFunctionForHotReloading(resolvedType);
       }
@@ -521,7 +526,7 @@ export function createFiberFromTypeAndProps(
   } else if (typeof type === 'string') {
     if (enableFloat && supportsResources && supportsSingletons) {
       const hostContext = getHostContext();
-      fiberTag = isHostHoistableType(type, pendingProps, hostContext)
+      fiberTag = isHostHoistableType(type, pendingProps, hostContext) 
         ? HostHoistable
         : isHostSingletonType(type)
         ? HostSingleton
@@ -534,7 +539,7 @@ export function createFiberFromTypeAndProps(
     } else if (supportsSingletons) {
       fiberTag = isHostSingletonType(type) ? HostSingleton : HostComponent;
     } else {
-      fiberTag = HostComponent;
+      fiberTag = HostComponent; // 原生dom的处理
     }
   } else {
     getTag: switch (type) {
@@ -642,6 +647,7 @@ export function createFiberFromTypeAndProps(
     }
   }
 
+  // 创建Fiber
   const fiber = createFiber(fiberTag, pendingProps, key, mode);
   fiber.elementType = type;
   fiber.type = resolvedType;
@@ -666,9 +672,11 @@ export function createFiberFromElement(
     source = element._source;
     owner = element._owner;
   }
-  const type = element.type;
+  const type = element.type; // 存储原始的组件内容，比如fun，class
   const key = element.key;
-  const pendingProps = element.props;
+  const pendingProps = element.props; // 等待处理的，最新的props
+
+  // 创建Fiber节点： 根据元素的type ，针对组件来说：type值一般为class类 或者Fun函数
   const fiber = createFiberFromTypeAndProps(
     type,
     key,
@@ -682,6 +690,7 @@ export function createFiberFromElement(
     fiber._debugSource = element._source;
     fiber._debugOwner = element._owner;
   }
+  // 返回新建的Fiber节点
   return fiber;
 }
 

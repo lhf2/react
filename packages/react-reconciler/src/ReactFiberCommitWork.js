@@ -332,6 +332,7 @@ function safelyDetachRef(current: Fiber, nearestMountedAncestor: Fiber | null) {
             recordLayoutEffectDuration(current);
           }
         } else {
+          // 如果ref为一个函数，直接调用ref，传递一个null，来重置
           retVal = ref(null);
         }
       } catch (error) {
@@ -373,8 +374,9 @@ export function commitBeforeMutationEffects(
   firstChild: Fiber,
 ): boolean {
   focusedInstanceHandle = prepareForCommit(root.containerInfo);
-
+  // 设置第一个处理的节点为 hostFiber
   nextEffect = firstChild;
+  // # 提交开始
   commitBeforeMutationEffects_begin();
 
   // We no longer need to track the active instance fiber
@@ -386,6 +388,7 @@ export function commitBeforeMutationEffects(
 }
 
 function commitBeforeMutationEffects_begin() {
+  // # while循环，处理所有节点
   while (nextEffect !== null) {
     const fiber = nextEffect;
 
@@ -402,14 +405,19 @@ function commitBeforeMutationEffects_begin() {
       }
     }
 
+    // 取出子节点 刚开始是hostFiber节点的child： 即App 组件
     const child = fiber.child;
+    // 如果该fiber的子节点存在BeforeMutation阶段相关的flags标记 且 child不为null;  则继续循环，
     if (
       (fiber.subtreeFlags & BeforeMutationMask) !== NoFlags &&
       child !== null
     ) {
       child.return = fiber;
+      // 设置child为下一个处理的节点
       nextEffect = child;
     } else {
+      // 只有当fiber的子节点不存在BeforeMutation阶段相关的flgas标记 且 child为null; 【叶子节点】
+      // 和reconciler流程一样，第一个进入complete工作的都是【div react源码调试】节点
       commitBeforeMutationEffects_complete();
     }
   }
@@ -420,15 +428,18 @@ function commitBeforeMutationEffects_complete() {
     const fiber = nextEffect;
     setCurrentDebugFiberInDEV(fiber);
     try {
+      // 处理当前节点的副作用
       commitBeforeMutationEffectsOnFiber(fiber);
     } catch (error) {
       captureCommitPhaseError(fiber, fiber.return, error);
     }
     resetCurrentDebugFiberInDEV();
 
+    // 取出兄弟节点，
     const sibling = fiber.sibling;
     if (sibling !== null) {
       sibling.return = fiber.return;
+      // 将兄弟节点设置为下一个nextEffect 【回到begin工作】
       nextEffect = sibling;
       return;
     }
@@ -439,6 +450,7 @@ function commitBeforeMutationEffects_complete() {
 
 function commitBeforeMutationEffectsOnFiber(finishedWork: Fiber) {
   const current = finishedWork.alternate;
+  // 副作用标记
   const flags = finishedWork.flags;
 
   if (enableCreateEventHandleAPI) {
@@ -457,10 +469,11 @@ function commitBeforeMutationEffectsOnFiber(finishedWork: Fiber) {
     }
   }
 
+  // 判断满足flags的节点
   if ((flags & Snapshot) !== NoFlags) {
     setCurrentDebugFiberInDEV(finishedWork);
   }
-
+  // 根据节点的类型，进行不同的副作用处理
   switch (finishedWork.tag) {
     case FunctionComponent: {
       if (enableUseEffectEventHook) {
@@ -533,10 +546,13 @@ function commitBeforeMutationEffectsOnFiber(finishedWork: Fiber) {
       }
       break;
     }
+    // hostFiber节点的处理
     case HostRoot: {
       if ((flags & Snapshot) !== NoFlags) {
         if (supportsMutation) {
+          // 应用根节点
           const root = finishedWork.stateNode;
+          // 设置textContent = ''; 也就是清空#div容器内容， 方便Mutation阶段的渲染
           clearContainer(root.containerInfo);
         }
       }
@@ -1052,7 +1068,9 @@ function commitLayoutEffectOnFiber(
   // When updating this function, also update reappearLayoutEffects, which does
   // most of the same things when an offscreen tree goes from hidden -> visible.
   const flags = finishedWork.flags;
+  // # 根据组件类型：进行不同的处理
   switch (finishedWork.tag) {
+    // # 1，函数组件的处理
     case FunctionComponent:
     case ForwardRef:
     case SimpleMemoComponent: {
@@ -1062,10 +1080,12 @@ function commitLayoutEffectOnFiber(
         committedLanes,
       );
       if (flags & Update) {
+        // 处理副作用 同步执行当前函数组件节点的useLayoutEffect 回调
         commitHookLayoutEffects(finishedWork, HookLayout | HookHasEffect);
       }
       break;
     }
+    // # 2，类组件的处理
     case ClassComponent: {
       recursivelyTraverseLayoutEffects(
         finishedRoot,
@@ -1081,6 +1101,7 @@ function commitLayoutEffectOnFiber(
       }
 
       if (flags & Ref) {
+        // # 绑定ref对象
         safelyAttachRef(finishedWork, finishedWork.return);
       }
       break;
@@ -1620,6 +1641,7 @@ function commitAttachRef(finishedWork: Fiber) {
           recordLayoutEffectDuration(finishedWork);
         }
       } else {
+        // 如果ref为一个函数，则直接将DOM实例或者组件实例作为参数传递给函数
         finishedWork.refCleanup = ref(instanceToUse);
       }
     } else {
@@ -1812,6 +1834,7 @@ function commitPlacement(finishedWork: Fiber): void {
     }
   }
   // Recursively insert all host nodes into the parent.
+  // finishedWork: fun App 它的父级节点为HostFIber 
   const parentFiber = getHostParentFiber(finishedWork);
 
   switch (parentFiber.tag) {
@@ -1826,6 +1849,7 @@ function commitPlacement(finishedWork: Fiber): void {
       }
       // Fall through
     }
+    // 普通DOM节点
     case HostComponent: {
       const parent: Instance = parentFiber.stateNode;
       if (parentFiber.flags & ContentReset) {
@@ -1838,13 +1862,18 @@ function commitPlacement(finishedWork: Fiber): void {
       const before = getHostSibling(finishedWork);
       // We only have the top Fiber that was inserted but we need to recurse down its
       // children to find all the terminal nodes.
+      // 插入节点
       insertOrAppendPlacementNode(finishedWork, before, parent);
       break;
     }
+    // 处理HostFiber节点的插入动作：
     case HostRoot:
     case HostPortal: {
+      // #root
       const parent: Container = parentFiber.stateNode.containerInfo;
+      // 无兄弟节点
       const before = getHostSibling(finishedWork);
+      // # 将离屏的DOM树插入到#div； 马上页面上显示出DOM内容
       insertOrAppendPlacementNodeIntoContainer(finishedWork, before, parent);
       break;
     }
@@ -1861,7 +1890,8 @@ function insertOrAppendPlacementNodeIntoContainer(
   before: ?Instance,
   parent: Container,
 ): void {
-  const {tag} = node;
+  const {tag} = node; // App根组件节点
+  // Host 或者 text
   const isHost = tag === HostComponent || tag === HostText;
   if (isHost) {
     const stateNode = node.stateNode;
@@ -1879,8 +1909,10 @@ function insertOrAppendPlacementNodeIntoContainer(
     // the portal directly.
     // If the insertion is a HostSingleton then it will be placed independently
   } else {
+    // # fun App节点的child ，也就是div.App 这个节点的内容就是一个离屏的DOM树
     const child = node.child;
     if (child !== null) {
+      // # 将整个离屏的DOM树添加到 #div中，页面渲染完成
       insertOrAppendPlacementNodeIntoContainer(child, before, parent);
       let sibling = child.sibling;
       while (sibling !== null) {
@@ -2484,13 +2516,14 @@ export function isSuspenseBoundaryBeingHidden(
 
 export function commitMutationEffects(
   root: FiberRoot,
-  finishedWork: Fiber,
+  finishedWork: Fiber, // hostFiber
   committedLanes: Lanes,
 ) {
   inProgressLanes = committedLanes;
   inProgressRoot = root;
 
   setCurrentDebugFiberInDEV(finishedWork);
+  // 从hostFiber节点开始处理
   commitMutationEffectsOnFiber(finishedWork, root, committedLanes);
   setCurrentDebugFiberInDEV(finishedWork);
 
@@ -2505,11 +2538,13 @@ function recursivelyTraverseMutationEffects(
 ) {
   // Deletions effects can be scheduled on any fiber type. They need to happen
   // before the children effects hae fired.
+  // 删除标记，是否存在
   const deletions = parentFiber.deletions;
   if (deletions !== null) {
     for (let i = 0; i < deletions.length; i++) {
       const childToDelete = deletions[i];
       try {
+        // 执行删除副作用
         commitDeletionEffects(root, parentFiber, childToDelete);
       } catch (error) {
         captureCommitPhaseError(childToDelete, parentFiber, error);
@@ -2518,10 +2553,13 @@ function recursivelyTraverseMutationEffects(
   }
 
   const prevDebugFiber = getCurrentDebugFiberInDEV();
+  // 如果子节点树有副作用标记
   if (parentFiber.subtreeFlags & MutationMask) {
+    // 取出子节点
     let child = parentFiber.child;
     while (child !== null) {
       setCurrentDebugFiberInDEV(child);
+      // 开始递归渲染
       commitMutationEffectsOnFiber(child, root, lanes);
       child = child.sibling;
     }
@@ -2536,27 +2574,35 @@ function commitMutationEffectsOnFiber(
   root: FiberRoot,
   lanes: Lanes,
 ) {
+  // 旧hostFiber 节点
   const current = finishedWork.alternate;
+  // 取出dom操作的标识flags
   const flags = finishedWork.flags;
 
   // The effect flag should be checked *after* we refine the type of fiber,
   // because the fiber tag is more specific. An exception is any flag related
   // to reconciliation, because those can be set on all fiber types.
+  // 根据节点tag，执行不同的逻辑
   switch (finishedWork.tag) {
+    // 函数组件处理
     case FunctionComponent:
     case ForwardRef:
     case MemoComponent:
     case SimpleMemoComponent: {
+      // recursivelyTraverse：递归遍历
       recursivelyTraverseMutationEffects(root, finishedWork, lanes);
+      // app组件跳出了循环，向下继续执行
       commitReconciliationEffects(finishedWork);
 
       if (flags & Update) {
         try {
+          // 执行useLayoutEffect的destroy方法
           commitHookEffectListUnmount(
             HookInsertion | HookHasEffect,
             finishedWork,
             finishedWork.return,
           );
+          // 循环effect链表执行 useInsertionEffect的 create方法
           commitHookEffectListMount(
             HookInsertion | HookHasEffect,
             finishedWork,
@@ -2595,12 +2641,14 @@ function commitMutationEffectsOnFiber(
       }
       return;
     }
+    // 类组件处理
     case ClassComponent: {
       recursivelyTraverseMutationEffects(root, finishedWork, lanes);
       commitReconciliationEffects(finishedWork);
 
       if (flags & Ref) {
         if (current !== null) {
+          // 重置ref对象
           safelyDetachRef(current, current.return);
         }
       }
@@ -2723,10 +2771,14 @@ function commitMutationEffectsOnFiber(
       }
       // Fall through
     }
+    // 原生dom元素处理
     case HostComponent: {
+      // 递归遍历
       recursivelyTraverseMutationEffects(root, finishedWork, lanes);
+      // 处理dom
       commitReconciliationEffects(finishedWork);
 
+      // 1，重置ref
       if (flags & Ref) {
         if (current !== null) {
           safelyDetachRef(current, current.return);
@@ -2739,16 +2791,23 @@ function commitMutationEffectsOnFiber(
         // the order matters. We should refactor so that ContentReset does not
         // rely on mutating the flag during commit. Like by setting a flag
         // during the render phase instead.
+        // 如果flags标记为ContentReset
+        // 2，重置dom内容
         if (finishedWork.flags & ContentReset) {
+          // dom实例
           const instance: Instance = finishedWork.stateNode;
           try {
+            // 重置dom的内容
             resetTextContent(instance);
           } catch (error) {
             captureCommitPhaseError(finishedWork, finishedWork.return, error);
           }
         }
 
+        // 3，更新dom属性和样式
+        // 如果flgas标记为Update更新
         if (flags & Update) {
+          // 取出当前节点对应的DOM对象
           const instance: Instance = finishedWork.stateNode;
           if (instance != null) {
             // Commit the work prepared earlier.
@@ -2780,6 +2839,7 @@ function commitMutationEffectsOnFiber(
       }
       return;
     }
+    // 文本处理
     case HostText: {
       recursivelyTraverseMutationEffects(root, finishedWork, lanes);
       commitReconciliationEffects(finishedWork);
@@ -2802,6 +2862,7 @@ function commitMutationEffectsOnFiber(
             current !== null ? current.memoizedProps : newText;
 
           try {
+            // 更新文本内容
             commitTextUpdate(textInstance, oldText, newText);
           } catch (error) {
             captureCommitPhaseError(finishedWork, finishedWork.return, error);
@@ -2810,13 +2871,14 @@ function commitMutationEffectsOnFiber(
       }
       return;
     }
+     // hostFiber根节点处理 【第一次会走根节点， 从根节点向下递归渲染dom】
     case HostRoot: {
       if (enableFloat && supportsResources) {
         prepareToCommitHoistables();
 
         const previousHoistableRoot = currentHoistableRoot;
         currentHoistableRoot = getHoistableRoot(root.containerInfo);
-
+        // recursivelyTraverse：递归遍历 【页面显示】
         recursivelyTraverseMutationEffects(root, finishedWork, lanes);
         currentHoistableRoot = previousHoistableRoot;
 
@@ -3072,8 +3134,10 @@ function commitReconciliationEffects(finishedWork: Fiber) {
   // type. They needs to happen after the children effects have fired, but
   // before the effects on this fiber have fired.
   const flags = finishedWork.flags;
+  // 如果是插入/移动标记
   if (flags & Placement) {
     try {
+      // 执行dom插入添加操作
       commitPlacement(finishedWork);
     } catch (error) {
       captureCommitPhaseError(finishedWork, finishedWork.return, error);

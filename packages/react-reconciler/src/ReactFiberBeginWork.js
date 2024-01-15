@@ -333,6 +333,7 @@ export function reconcileChildren(
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
     // we can optimize this reconciliation pass by not tracking side-effects.
+    // 加载流程
     workInProgress.child = mountChildFibers(
       workInProgress,
       null,
@@ -346,11 +347,12 @@ export function reconcileChildren(
 
     // If we had any progressed work already, that is invalid at this point so
     // let's throw it out.
+    // 更新协调流程， 更新当前节点的child内容
     workInProgress.child = reconcileChildFibers(
-      workInProgress,
-      current.child,
-      nextChildren,
-      renderLanes,
+      workInProgress, // 父节点
+      current.child, // 旧的child， null
+      nextChildren, // 新的child
+      renderLanes, // 本次更新的lanes
     );
   }
 }
@@ -1451,11 +1453,12 @@ function updateHostRoot(
   }
 
   const nextProps = workInProgress.pendingProps;
+  // 之前的state
   const prevState = workInProgress.memoizedState;
   const prevChildren = prevState.element;
   cloneUpdateQueue(current, workInProgress);
   processUpdateQueue(workInProgress, nextProps, null, renderLanes);
-
+  // 处理后的state
   const nextState: RootState = workInProgress.memoizedState;
   const root: FiberRoot = workInProgress.stateNode;
   pushRootTransition(workInProgress, root, renderLanes);
@@ -1475,7 +1478,7 @@ function updateHostRoot(
 
   // Caution: React DevTools currently depends on this property
   // being called "element".
-  const nextChildren = nextState.element;
+  const nextChildren = nextState.element; // 存储的组件的内容
   if (supportsHydration && prevState.isDehydrated) {
     // This is a hydration root whose shell has not yet hydrated. We should
     // attempt to hydrate.
@@ -1555,11 +1558,14 @@ function updateHostRoot(
     // Root is not dehydrated. Either this is a client-only root, or it
     // already hydrated.
     resetHydrationState();
+    // 如果新旧children相同，则会进入优化的逻辑，跳过本次reconcile协调流程，复用原来的节点内容
     if (nextChildren === prevChildren) {
       return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
     }
+    // 不相同，则进入diff过程，创建新的子节点内容
     reconcileChildren(current, workInProgress, nextChildren, renderLanes);
   }
+  // 返回新建的子节点
   return workInProgress.child;
 }
 
@@ -4022,6 +4028,7 @@ function beginWork(
     }
   }
 
+  // update更新流程
   if (current !== null) {
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
@@ -4069,6 +4076,7 @@ function beginWork(
       }
     }
   } else {
+    // mount加载流程
     didReceiveUpdate = false;
 
     if (getIsHydrating() && isForkedChild(workInProgress)) {
@@ -4094,7 +4102,9 @@ function beginWork(
   // move this assignment out of the common path and into each branch.
   workInProgress.lanes = NoLanes;
 
+  // 根据不同的tag，进入不同的处理逻辑
   switch (workInProgress.tag) {
+    // 函数组件 mount
     case IndeterminateComponent: {
       return mountIndeterminateComponent(
         current,
@@ -4112,6 +4122,7 @@ function beginWork(
         renderLanes,
       );
     }
+    // 函数组件 update
     case FunctionComponent: {
       const Component = workInProgress.type;
       const unresolvedProps = workInProgress.pendingProps;
@@ -4127,6 +4138,7 @@ function beginWork(
         renderLanes,
       );
     }
+    // 类组件分支
     case ClassComponent: {
       const Component = workInProgress.type;
       const unresolvedProps = workInProgress.pendingProps;
@@ -4134,14 +4146,16 @@ function beginWork(
         workInProgress.elementType === Component
           ? unresolvedProps
           : resolveDefaultProps(Component, unresolvedProps);
+      // 处理class App组件【此时App组件对应的FiberNode已经创建】
       return updateClassComponent(
         current,
-        workInProgress,
-        Component,
+        workInProgress, // 存储的App组件对应的FiberNode
+        Component, // FiberNode.type
         resolvedProps,
         renderLanes,
       );
     }
+    // 根节点的处理【第一次都会走这里】
     case HostRoot:
       return updateHostRoot(current, workInProgress, renderLanes);
     case HostHoistable:
@@ -4154,14 +4168,16 @@ function beginWork(
         return updateHostSingleton(current, workInProgress, renderLanes);
       }
     // Fall through
+    // 代表原生Element元素，div,span
     case HostComponent:
       return updateHostComponent(current, workInProgress, renderLanes);
-    case HostText:
+    case HostText: // 文本类型
       return updateHostText(current, workInProgress);
     case SuspenseComponent:
       return updateSuspenseComponent(current, workInProgress, renderLanes);
     case HostPortal:
       return updatePortalComponent(current, workInProgress, renderLanes);
+    // 处理ForwardRef组件 11
     case ForwardRef: {
       const type = workInProgress.type;
       const unresolvedProps = workInProgress.pendingProps;
@@ -4187,6 +4203,9 @@ function beginWork(
       return updateContextProvider(current, workInProgress, renderLanes);
     case ContextConsumer:
       return updateContextConsumer(current, workInProgress, renderLanes);
+    // memo组件处理 14
+    // 简单MemoComponent在首次创建时也会走这里，更新时会走下面updateSimpleMemoComponent
+    // 因为它会在进入MemoComponent后，进入另外一个分支，走updateSimpleMemoComponent
     case MemoComponent: {
       const type = workInProgress.type;
       const unresolvedProps = workInProgress.pendingProps;
@@ -4214,6 +4233,7 @@ function beginWork(
         renderLanes,
       );
     }
+    // 简单memo组件：15
     case SimpleMemoComponent: {
       return updateSimpleMemoComponent(
         current,
