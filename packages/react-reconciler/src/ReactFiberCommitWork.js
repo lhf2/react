@@ -647,12 +647,16 @@ function commitHookEffectListUnmount(
 }
 
 function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
+  // # 当前函数组件的updateQueue属性，存储的是副作用链表
   const updateQueue: FunctionComponentUpdateQueue | null =
     (finishedWork.updateQueue: any);
+  // 取出最后一个effect对象
   const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
   if (lastEffect !== null) {
+    // 获取第一个effect对象
     const firstEffect = lastEffect.next;
     let effect = firstEffect;
+    // 开始循环处理
     do {
       if ((effect.tag & flags) === flags) {
         if (enableSchedulingProfiler) {
@@ -671,6 +675,7 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
           }
         }
         const inst = effect.inst;
+        // # 执行回调函数
         const destroy = create();
         inst.destroy = destroy;
         if (__DEV__) {

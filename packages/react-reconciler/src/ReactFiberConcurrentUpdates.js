@@ -117,7 +117,7 @@ export function enqueueConcurrentHookUpdate<S, A>(
   update: HookUpdate<S, A>,
   lane: Lane,
 ): FiberRoot | null {
-  const concurrentQueue: ConcurrentQueue = (queue: any);
+  const concurrentQueue: ConcurrentQueue = (queue: any);·
   const concurrentUpdate: ConcurrentUpdate = (update: any);
   enqueueUpdate(fiber, concurrentQueue, concurrentUpdate, lane);
   return getRootForUpdatedFiber(fiber);

@@ -1902,6 +1902,7 @@ function mountIndeterminateComponent(
 ) {
   resetSuspendedCurrentOnMountInLegacyMode(_current, workInProgress);
 
+  // 取出函数组件的props  {name: "MyFun"}
   const props = workInProgress.pendingProps;
   let context;
   if (!disableLegacyContext) {
@@ -1914,6 +1915,8 @@ function mountIndeterminateComponent(
   }
 
   prepareToReadContext(workInProgress, renderLanes);
+
+  // 存储FirstChild内容
   let value;
   let hasId;
 
@@ -1944,6 +1947,7 @@ function mountIndeterminateComponent(
 
     setIsRendering(true);
     ReactCurrentOwner.current = workInProgress;
+    // # 调用函数组件
     value = renderWithHooks(
       null,
       workInProgress,
@@ -1998,6 +2002,7 @@ function mountIndeterminateComponent(
     }
   }
 
+  // 针对类组件和函数组件进行不同的处理
   if (
     // Run these checks in production only if the flag is off.
     // Eventually we'll delete this branch altogether.
@@ -2007,6 +2012,7 @@ function mountIndeterminateComponent(
     typeof value.render === 'function' &&
     value.$$typeof === undefined
   ) {
+    // # 类组件的处理逻辑 【只是类组件现在已经不走这里了】
     if (__DEV__) {
       const componentName = getComponentNameFromType(Component) || 'Unknown';
       if (!didWarnAboutModulePatternComponent[componentName]) {
@@ -2059,6 +2065,8 @@ function mountIndeterminateComponent(
     );
   } else {
     // Proceed under the assumption that this is a function component
+    // # 函数组件处理
+    // 更新 tag 为函数组件类型的值，下个逻辑就可以直接进入函数组件的处理【节点更新的时候】
     workInProgress.tag = FunctionComponent;
     if (__DEV__) {
       if (disableLegacyContext && Component.contextTypes) {
@@ -2074,6 +2082,8 @@ function mountIndeterminateComponent(
       pushMaterializedTreeId(workInProgress);
     }
 
+    // # 创建子节点
+    // 处理函数组件 FirstChild 内容【当前为App组件】
     reconcileChildren(null, workInProgress, value, renderLanes);
     if (__DEV__) {
       validateFunctionComponentInDev(workInProgress, Component);
