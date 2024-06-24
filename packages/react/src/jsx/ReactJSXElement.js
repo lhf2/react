@@ -371,6 +371,7 @@ function ReactElement(
     }
   }
 
+  // 返回虚拟 DOM 对象
   return element;
 }
 
@@ -548,6 +549,11 @@ export function jsxDEV(type, config, maybeKey, isStaticChildren, source, self) {
   );
 }
 
+/**
+ * @param {*} type 元素类型 h1 div p
+ * @param {object} config 属性对象 {children: xxx, style: {color: "red"}}
+ * @param {string} key
+ */
 function jsxDEVImpl(
   type,
   config,
@@ -655,8 +661,8 @@ function jsxDEVImpl(
       }
     }
 
-    let key = null;
-    let ref = null;
+    let key = null; // 每一个虚拟DOM都有一个可选的key属性，用来区分一个父节点下的不同子节点
+    let ref = null; // 通过 ref 来获取到真实的 DOM
 
     // Currently, key can be spread in as a prop. This causes a potential
     // issue if key is also explicitly declared (ie. <div {...props} key="Hi" />
@@ -671,6 +677,7 @@ function jsxDEVImpl(
       key = '' + maybeKey;
     }
 
+    // config 中是否有 key，给 key 赋值
     if (hasValidKey(config)) {
       if (__DEV__) {
         checkKeyStringCoercion(config.key);
@@ -678,6 +685,7 @@ function jsxDEVImpl(
       key = '' + config.key;
     }
 
+    // config 中是否有 ref，给 ref 赋值
     if (hasValidRef(config)) {
       if (!enableRefAsProp) {
         ref = config.ref;
@@ -717,6 +725,7 @@ function jsxDEVImpl(
           if (enableRefAsProp && !disableStringRefs && propName === 'ref') {
             props.ref = coerceStringRef(config[propName], getOwner(), type);
           } else {
+            // 属性的赋值
             props[propName] = config[propName];
           }
         }
@@ -748,6 +757,7 @@ function jsxDEVImpl(
       }
     }
 
+    // 返回一个工厂函数，调用此函数返回虚拟DOM
     return ReactElement(
       type,
       key,
