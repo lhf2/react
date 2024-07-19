@@ -83,6 +83,9 @@ let isFlushingWork: boolean = false;
 
 let currentEventTransitionLane: Lane = NoLane;
 
+// 每当root收到更新时，就会调用此函数。它有两个事情：
+// 1）它确保根在根调度中
+// 2）它确保有一个待处理的微任务来处理根调度。
 export function ensureRootIsScheduled(root: FiberRoot): void {
   // This function is called whenever a root receives an update. It does two
   // things 1) it ensures the root is in the root schedule, and 2) it ensures
@@ -362,6 +365,7 @@ function scheduleTaskForRootDuringMicrotask(
         break;
     }
 
+    // 核心：工作调度
     const newCallbackNode = scheduleCallback(
       schedulerPriorityLevel,
       performConcurrentWorkOnRoot.bind(null, root),

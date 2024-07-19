@@ -260,6 +260,7 @@ function getRootForUpdatedFiber(sourceFiber: Fiber): FiberRoot | null {
   // different times.
   // TODO: Consider adding a `root` backpointer on the update queue.
   detectUpdateOnUnmountedFiber(sourceFiber, sourceFiber);
+  // 从当前fiber一直往上找父亲，直到找到根fiber，返回根fiber的dom元素，也就是fiberRootNode（div#root）
   let node = sourceFiber;
   let parent = node.return;
   while (parent !== null) {

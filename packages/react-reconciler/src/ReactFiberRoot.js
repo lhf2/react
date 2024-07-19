@@ -58,7 +58,7 @@ function FiberRootNode(
   formState: ReactFormState<any, any> | null,
 ) {
   this.tag = disableLegacyMode ? ConcurrentRoot : tag;
-  this.containerInfo = containerInfo;
+  this.containerInfo = containerInfo; //div#root
   this.pendingChildren = null;
   this.current = null;
   this.pingCache = null;
@@ -172,6 +172,7 @@ export function createFiberRoot(
   formState: ReactFormState<any, any> | null,
 ): FiberRoot {
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
+  // FiberRootNode 类内部会有很多的属性，其中 containerInfo 指向根节点
   const root: FiberRoot = (new FiberRootNode(
     containerInfo,
     tag,
@@ -192,11 +193,16 @@ export function createFiberRoot(
 
   // Cyclic construction. This cheats the type system right now because
   // stateNode is any.
+  // HostRoot 指的就是根节点 div#root
+  // 创建根 fiber
   const uninitializedFiber = createHostRootFiber(
     tag,
     isStrictMode,
     concurrentUpdatesByDefaultOverride,
   );
+  // 双向指向
+  // 根容器的 current 指向当前的根 fiber
+  // 根 fiber 的 stateNode，也就是真实 DOM 节点指向 FiberRootNode
   root.current = uninitializedFiber;
   uninitializedFiber.stateNode = root;
 
@@ -228,6 +234,7 @@ export function createFiberRoot(
     uninitializedFiber.memoizedState = initialState;
   }
 
+  // 初始化 updateQueue
   initializeUpdateQueue(uninitializedFiber);
 
   return root;

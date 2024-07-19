@@ -463,6 +463,7 @@ function createChildReconciler(
     lastPlacedIndex: number,
     newIndex: number,
   ): number {
+    // 设置索引
     newFiber.index = newIndex;
     if (!shouldTrackSideEffects) {
       // During hydration, the useId algorithm needs to know which fibers are
@@ -483,11 +484,13 @@ function createChildReconciler(
       }
     } else {
       // This is an insertion.
+      // 设置副作用
       newFiber.flags |= Placement | PlacementDEV;
       return lastPlacedIndex;
     }
   }
 
+  // 给 fiber 添加上副作用（这里会有h1添加Placement副作用）
   function placeSingleChild(newFiber: Fiber): Fiber {
     // This is simpler for the single child case. We only need to do a
     // placement for inserting new children.
@@ -644,6 +647,7 @@ function createChildReconciler(
     lanes: Lanes,
   ): Fiber | null {
     if (
+      // 如果是以下的类型，就创建一个文本fiber（HostText）
       (typeof newChild === 'string' && newChild !== '') ||
       typeof newChild === 'number' ||
       typeof newChild === 'bigint'
@@ -666,6 +670,7 @@ function createChildReconciler(
 
     if (typeof newChild === 'object' && newChild !== null) {
       switch (newChild.$$typeof) {
+        // 元素类型
         case REACT_ELEMENT_TYPE: {
           const created = createFiberFromElement(
             newChild,
@@ -1130,12 +1135,12 @@ function createChildReconciler(
 
     let knownKeys: Set<string> | null = null;
 
-    let resultingFirstChild: Fiber | null = null;
-    let previousNewFiber: Fiber | null = null;
+    let resultingFirstChild: Fiber | null = null; // 第一个大儿子
+    let previousNewFiber: Fiber | null = null; // 上一次创建的新fiber
 
     let oldFiber = currentFirstChild;
     let lastPlacedIndex = 0;
-    let newIdx = 0;
+    let newIdx = 0; // fiber的索引，每个子fiber要放到父fiber正确的位置上
     let nextOldFiber = null;
     for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
       if (oldFiber.index > newIdx) {
@@ -1202,10 +1207,12 @@ function createChildReconciler(
       return resultingFirstChild;
     }
 
+    // 会走这个分支（孩子都是插入的）
     if (oldFiber === null) {
       // If we don't have any more existing children we can choose a fast path
       // since the rest will all be insertions.
       for (; newIdx < newChildren.length; newIdx++) {
+        // 循环创建每一个子fiber
         const newFiber = createChild(returnFiber, newChildren[newIdx], lanes);
         if (newFiber === null) {
           continue;
@@ -1218,19 +1225,25 @@ function createChildReconciler(
             knownKeys,
           );
         }
+        // 把每一个子fiber放到正确的索引位置
         lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+        // 如果之前没有创建的fiber
         if (previousNewFiber === null) {
+          // 说明当前父fiber还没有儿子，newFiber是大儿子
           // TODO: Move out of the loop. This only happens for the first run.
           resultingFirstChild = newFiber;
         } else {
+          // 如果之前有，证明已经有大儿子了，newFiber是弟弟
           previousNewFiber.sibling = newFiber;
         }
+        // 每次都更改previousNewFiber
         previousNewFiber = newFiber;
       }
       if (getIsHydrating()) {
         const numberOfForks = newIdx;
         pushTreeFork(returnFiber, numberOfForks);
       }
+      // 返回结果大儿子
       return resultingFirstChild;
     }
 
@@ -1602,15 +1615,17 @@ function createChildReconciler(
     // The existing first child is not a text node so we need to create one
     // and delete the existing ones.
     deleteRemainingChildren(returnFiber, currentFirstChild);
+    // 创建文本 fiber 节点
     const created = createFiberFromText(textContent, returnFiber.mode, lanes);
     created.return = returnFiber;
     return created;
   }
 
+  // 协调单个元素（通过vdom创建出fiber）
   function reconcileSingleElement(
-    returnFiber: Fiber,
-    currentFirstChild: Fiber | null,
-    element: ReactElement,
+    returnFiber: Fiber, // 父fiber
+    currentFirstChild: Fiber | null, // 老的第一个儿子
+    element: ReactElement, // 新的虚拟dom
     lanes: Lanes,
   ): Fiber {
     const key = element.key;
@@ -1682,12 +1697,15 @@ function createChildReconciler(
       validateFragmentProps(element, created, returnFiber);
       return created;
     } else {
+      // 通过虚拟dom创建fiber
       const created = createFiberFromElement(element, returnFiber.mode, lanes);
       coerceRef(returnFiber, currentFirstChild, created, element);
+      // fiber的return指向父fiber
       created.return = returnFiber;
       if (__DEV__) {
         created._debugInfo = currentDebugInfo;
       }
+      // 返回创建的fiber
       return created;
     }
   }
@@ -1760,10 +1778,12 @@ function createChildReconciler(
     }
 
     // Handle object types
+    // 处理对象类型（第一次的vdom）
     if (typeof newChild === 'object' && newChild !== null) {
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE: {
           const prevDebugInfo = pushDebugInfo(newChild._debugInfo);
+          // 协调单个节点并放置正确的位置
           const firstChild = placeSingleChild(
             reconcileSingleElement(
               returnFiber,
@@ -1804,7 +1824,7 @@ function createChildReconciler(
           return firstChild;
         }
       }
-
+      // 处理数组类型，多个子节点的情况 (hello，<span>world</span>)
       if (isArray(newChild)) {
         const prevDebugInfo = pushDebugInfo(newChild._debugInfo);
         const firstChild = reconcileChildrenArray(
@@ -1886,6 +1906,7 @@ function createChildReconciler(
       throwOnInvalidObjectType(returnFiber, newChild);
     }
 
+    // 处理文本类型（hello）
     if (
       (typeof newChild === 'string' && newChild !== '') ||
       typeof newChild === 'number' ||
@@ -1915,6 +1936,7 @@ function createChildReconciler(
     return deleteRemainingChildren(returnFiber, currentFirstChild);
   }
 
+  // 根据类型不同来创建不同的fiber
   function reconcileChildFibers(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1927,6 +1949,7 @@ function createChildReconciler(
       // This indirection only exists so we can reset `thenableState` at the end.
       // It should get inlined by Closure.
       thenableIndexCounter = 0;
+      // 核心
       const firstChildFiber = reconcileChildFibersImpl(
         returnFiber,
         currentFirstChild,
@@ -1992,6 +2015,7 @@ function createChildReconciler(
   return reconcileChildFibers;
 }
 
+// 调用一个工厂函数，通过传入是否跟踪副作用（shouldTrackSideEffects）来区分是新建还是协调
 export const reconcileChildFibers: ChildReconciler =
   createChildReconciler(true);
 export const mountChildFibers: ChildReconciler = createChildReconciler(false);

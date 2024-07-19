@@ -175,13 +175,14 @@ if (__DEV__) {
   };
 }
 
+// 初始化更新队列 -> 更新队列是一个单向环状链表
 export function initializeUpdateQueue<State>(fiber: Fiber): void {
   const queue: UpdateQueue<State> = {
     baseState: fiber.memoizedState,
     firstBaseUpdate: null,
     lastBaseUpdate: null,
     shared: {
-      pending: null,
+      pending: null, // pending 指向最后一个更新，pending.next 指向第一个更新
       lanes: NoLanes,
       hiddenCallbacks: null,
     },
@@ -223,8 +224,8 @@ export function createUpdate(lane: Lane): Update<mixed> {
 }
 
 export function enqueueUpdate<State>(
-  fiber: Fiber,
-  update: Update<State>,
+  fiber: Fiber, // 当前fiber
+  update: Update<State>, // 更新
   lane: Lane,
 ): FiberRoot | null {
   const updateQueue = fiber.updateQueue;
@@ -255,6 +256,7 @@ export function enqueueUpdate<State>(
   if (isUnsafeClassRenderPhaseUpdate(fiber)) {
     // This is an unsafe render phase update. Add directly to the update
     // queue so we can process it immediately during the current render.
+    // 把更新拼成一个环状链表
     const pending = sharedQueue.pending;
     if (pending === null) {
       // This is the first update. Create a circular list.
@@ -269,6 +271,7 @@ export function enqueueUpdate<State>(
     // this fiber. This is for backwards compatibility in the case where you
     // update a different component during render phase than the one that is
     // currently renderings (a pattern that is accompanied by a warning).
+    // 返回根节点
     return unsafe_markUpdateLaneFromFiberToRoot(fiber, lane);
   } else {
     return enqueueConcurrentClassUpdate(fiber, sharedQueue, update, lane);
@@ -456,6 +459,7 @@ function getStateFromUpdate<State>(
         // Null and undefined are treated as no-ops.
         return prevState;
       }
+      // 合并新状态跟之前的状态
       // Merge the partial state and the previous state.
       return assign({}, prevState, partialState);
     }
@@ -491,6 +495,7 @@ export function suspendIfUpdateReadFromEntangledAsyncAction() {
   }
 }
 
+// 处理更新队列，算出最新的状态
 export function processUpdateQueue<State>(
   workInProgress: Fiber,
   props: any,
@@ -512,6 +517,7 @@ export function processUpdateQueue<State>(
   let lastBaseUpdate = queue.lastBaseUpdate;
 
   // Check if there are pending updates. If so, transfer them to the base queue.
+  // 把更新队列的环状链表剪开变成单链表（方便计算最新状态）
   let pendingQueue = queue.shared.pending;
   if (pendingQueue !== null) {
     queue.shared.pending = null;
@@ -553,6 +559,7 @@ export function processUpdateQueue<State>(
   // These values may change as we process the queue.
   if (firstBaseUpdate !== null) {
     // Iterate through the list of updates to compute the result.
+    // 迭代更新列表以计算结果
     let newState = queue.baseState;
     // TODO: Don't need to accumulate this. Instead, we can remove renderLanes
     // from the original lanes.
@@ -561,7 +568,7 @@ export function processUpdateQueue<State>(
     let newBaseState = null;
     let newFirstBaseUpdate = null;
     let newLastBaseUpdate: null | Update<State> = null;
-
+    // 从第一个update开始循环计算
     let update: Update<State> = firstBaseUpdate;
     do {
       // An extra OffscreenLane bit is added to updates that were made to
@@ -695,6 +702,7 @@ export function processUpdateQueue<State>(
     // that regardless.
     markSkippedUpdateLanes(newLanes);
     workInProgress.lanes = newLanes;
+    // 把计算之后的新状态赋值到 memoizedState 上
     workInProgress.memoizedState = newState;
   }
 

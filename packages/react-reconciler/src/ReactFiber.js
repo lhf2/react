@@ -137,43 +137,49 @@ if (__DEV__) {
 
 function FiberNode(
   this: $FlowFixMe,
-  tag: WorkTag,
-  pendingProps: mixed,
-  key: null | string,
+  tag: WorkTag, // fiber的类型 函数组件0 类组件1 原生组件5（span div）根元素3
+  pendingProps: mixed, // 新属性，等待处理或者生效的属性
+  key: null | string, // 唯一标识
   mode: TypeOfMode,
 ) {
   // Instance
   this.tag = tag;
   this.key = key;
   this.elementType = null;
-  this.type = null;
-  this.stateNode = null;
+  this.type = null; // fiber 的类型，来自于虚拟 DOM 节点的 type（span div p）
+  // 每个虚拟DOM => fiber节点 => 真实DOM
+  this.stateNode = null; // fiber 对应的真实 DOM
 
   // Fiber
-  this.return = null;
-  this.child = null;
-  this.sibling = null;
+  this.return = null; // 父节点
+  this.child = null; // 第一个子节点
+  this.sibling = null; // 弟弟
   this.index = 0;
 
   this.ref = null;
   this.refCleanup = null;
 
-  this.pendingProps = pendingProps;
-  this.memoizedProps = null;
-  this.updateQueue = null;
-  this.memoizedState = null;
+  this.pendingProps = pendingProps; // 等待生效的属性（处理前）
+  this.memoizedProps = null; // 已经生效的属性（处理后）
+  this.updateQueue = null; // 更新队列（setState等）
+  // 每个 fiber 还会有自己的状态，每一种 fiber 状态存的类型是不一样的
+  // 类组件对应的 fiber 存的就是类的实例的状态、HostRoot 存的就是要渲染的元素（虚拟DOM）
+  this.memoizedState = null; 
   this.dependencies = null;
 
   this.mode = mode;
 
   // Effects
-  this.flags = NoFlags;
-  this.subtreeFlags = NoFlags;
+  this.flags = NoFlags; // 副作用标识，表示要针对此 fiber 节点进行何种操作
+  // 子节点对应的副作用标识
+  // 为了性能优化，需要向上冒泡到父节点。如果子节点没有副作用，就不需要递归了。
+  // react18之前会收集 effect，存到 effectList 链表中，目前已废弃。现在是从根节点开始递归。
+  this.subtreeFlags = NoFlags; 
   this.deletions = null;
 
   this.lanes = NoLanes;
   this.childLanes = NoLanes;
-
+  // 替身（双缓冲技术）
   this.alternate = null;
 
   if (enableProfilerTimer) {
@@ -265,6 +271,9 @@ export function isFunctionClassComponent(
 export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   let workInProgress = current.alternate;
   if (workInProgress === null) {
+    // 我们使用双缓冲池技术，因为我们知道一棵树最多只需要两个版本
+    // 我们将“其他”未使用的我们可以自由重用的节点
+    // 这是延迟创建的，以避免分配从未更新的内容的额外对象。它还允许我们如果需要，回收额外的内+存
     // We use a double buffering pooling technique because we know that we'll
     // only ever need at most two versions of a tree. We pool the "other" unused
     // node that we're free to reuse. This is lazily created to avoid allocating
@@ -276,6 +285,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
       current.key,
       current.mode,
     );
+    // 把能复用的属性都拿过来
     workInProgress.elementType = current.elementType;
     workInProgress.type = current.type;
     workInProgress.stateNode = current.stateNode;
@@ -290,7 +300,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
       }
       workInProgress._debugHookTypes = current._debugHookTypes;
     }
-
+    // 建立双向的指向
     workInProgress.alternate = current;
     current.alternate = workInProgress;
   } else {
@@ -482,6 +492,8 @@ export function createHostRootFiber(
     mode |= ProfileMode;
   }
 
+  // 创建 fiber 节点（FiberNode 类，内部有很多属性）
+  // tag 为 HostRoot 代表创建的是根节点
   return createFiber(HostRoot, null, null, mode);
 }
 
@@ -659,6 +671,8 @@ export function createFiberFromTypeAndProps(
     }
   }
 
+  // 通过 createFiber 创建 fiber，这里主要是处理 fiberTag 的值；
+  // 用虚拟dom的type(h1, span)转化成fiber的tag（HostComponent、FunctionComponent 等）
   const fiber = createFiber(fiberTag, pendingProps, key, mode);
   fiber.elementType = type;
   fiber.type = resolvedType;
@@ -680,9 +694,11 @@ export function createFiberFromElement(
   if (__DEV__) {
     owner = element._owner;
   }
+  // 获取虚拟dom的类型、key、属性
   const type = element.type;
   const key = element.key;
   const pendingProps = element.props;
+  // 核心
   const fiber = createFiberFromTypeAndProps(
     type,
     key,

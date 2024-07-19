@@ -340,6 +340,7 @@ export function reconcileChildren(
   nextChildren: any,
   renderLanes: Lanes,
 ) {
+  // 如果没有老fiber，就走创建（h1）
   if (current === null) {
     // If this is a fresh new component that hasn't been rendered yet, we
     // won't update its child set by applying minimal side-effects. Instead,
@@ -352,6 +353,7 @@ export function reconcileChildren(
       renderLanes,
     );
   } else {
+    // 如果有老fiber，就走协调（根fiber）
     // If the current child is the same as the work in progress, it means that
     // we haven't yet started any work on these children. Therefore, we use
     // the clone algorithm to create a copy of all the current children.
@@ -1474,6 +1476,7 @@ function updateHostRoot(
   const prevState = workInProgress.memoizedState;
   const prevChildren = prevState.element;
   cloneUpdateQueue(current, workInProgress);
+  // 处理更新队列（会把newState放入fiber的memoizedState，第一次里面放的肯定是虚拟dom {element: xxx}）
   processUpdateQueue(workInProgress, nextProps, null, renderLanes);
 
   const nextState: RootState = workInProgress.memoizedState;
@@ -1500,6 +1503,7 @@ function updateHostRoot(
 
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 取出虚拟dom
   const nextChildren = nextState.element;
   if (supportsHydration && prevState.isDehydrated) {
     // This is a hydration root whose shell has not yet hydrated. We should
@@ -1574,8 +1578,10 @@ function updateHostRoot(
     if (nextChildren === prevChildren) {
       return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
     }
+    // 协调孩子们
     reconcileChildren(current, workInProgress, nextChildren, renderLanes);
   }
+  // 返回大儿子作为下一个工作单元
   return workInProgress.child;
 }
 
@@ -1608,8 +1614,9 @@ function updateHostComponent(
   const type = workInProgress.type;
   const nextProps = workInProgress.pendingProps;
   const prevProps = current !== null ? current.memoizedProps : null;
-
+  // 找到儿子（h1的儿子 是一个数组 [hello、<span>world</span>]）
   let nextChildren = nextProps.children;
+  // 判断子节点只是一个字符串或者数字（这里做了一个优化，如果是的话，就不单独给这个字符串创建一个fiber节点，比如world）
   const isDirectTextChild = shouldSetTextContent(type, nextProps);
 
   if (isDirectTextChild) {
@@ -1680,6 +1687,7 @@ function updateHostComponent(
   }
 
   markRef(current, workInProgress);
+  // 协调子节点
   reconcileChildren(current, workInProgress, nextChildren, renderLanes);
   return workInProgress.child;
 }
@@ -3840,6 +3848,7 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
   return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
 }
 
+// 开始工作
 function beginWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -3936,6 +3945,7 @@ function beginWork(
   // move this assignment out of the common path and into each branch.
   workInProgress.lanes = NoLanes;
 
+  // 根据 tag 的不同做不同的处理
   switch (workInProgress.tag) {
     case LazyComponent: {
       const elementType = workInProgress.elementType;

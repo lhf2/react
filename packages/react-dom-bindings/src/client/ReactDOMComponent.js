@@ -356,6 +356,7 @@ function setProp(
   prevValue: mixed,
 ): void {
   switch (key) {
+    // 处理 children
     case 'children': {
       if (typeof value === 'string') {
         if (__DEV__) {
@@ -368,6 +369,7 @@ function setProp(
         const canSetTextContent =
           tag !== 'body' && (tag !== 'textarea' || value !== '');
         if (canSetTextContent) {
+          // 设置文本
           setTextContent(domElement, value);
         }
       } else if (typeof value === 'number' || typeof value === 'bigint') {
@@ -401,6 +403,7 @@ function setProp(
       setValueForKnownAttribute(domElement, key, value);
       break;
     }
+    // 设置样式
     case 'style': {
       setValueForStyles(domElement, value, prevValue);
       break;
@@ -1337,6 +1340,7 @@ export function setInitialProperties(
     }
   }
 
+  // 循环所有的属性，并给dom设置
   for (const propKey in props) {
     if (!props.hasOwnProperty(propKey)) {
       continue;

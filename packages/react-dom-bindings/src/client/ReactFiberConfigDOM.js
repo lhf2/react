@@ -476,6 +476,7 @@ export function createInstance(
             // Separate else branch instead of using `props.is || undefined` above because of a Firefox bug.
             // See discussion in https://github.com/facebook/react/pull/6896
             // and discussion in https://bugzilla.mozilla.org/show_bug.cgi?id=1276240
+            // 创建真实DOM
             domElement = ownerDocument.createElement(type);
           }
 

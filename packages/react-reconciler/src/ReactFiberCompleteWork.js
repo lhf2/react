@@ -219,9 +219,12 @@ function appendAllChildren(
   if (supportsMutation) {
     // We only have the top Fiber that was created but we need recurse down its
     // children to find all the terminal nodes.
+    // 我们只有创建的顶级fiber，但需要递归其子节点来查找所有终端节点
     let node = workInProgress.child;
     while (node !== null) {
+      // 如果是原生节点，直接添加到父节点上
       if (node.tag === HostComponent || node.tag === HostText) {
+        // 完成节点是从下往上的 所以子节点的stateNode是有值的
         appendInitialChild(parent, node.stateNode);
       } else if (
         node.tag === HostPortal ||
@@ -231,6 +234,7 @@ function appendAllChildren(
         // down its children. Instead, we'll get insertions from each child in
         // the portal directly.
         // If we have a HostSingleton it will be placed independently
+        // 如果当前node不是原生节点（比如函数组件），就找它的儿子
       } else if (node.child !== null) {
         node.child.return = node;
         node = node.child;
@@ -240,7 +244,9 @@ function appendAllChildren(
         return;
       }
       // $FlowFixMe[incompatible-use] found when upgrading Flow
+      // 如果没有弟弟就找父亲的弟弟
       while (node.sibling === null) {
+        // 如果找到了根节点或者回到了原节点结束
         // $FlowFixMe[incompatible-use] found when upgrading Flow
         if (node.return === null || node.return === workInProgress) {
           return;
@@ -249,6 +255,7 @@ function appendAllChildren(
       }
       // $FlowFixMe[incompatible-use] found when upgrading Flow
       node.sibling.return = node.return;
+      // 下一个弟弟节点
       node = node.sibling;
     }
   } else if (supportsPersistence) {
@@ -727,6 +734,7 @@ function bubbleProperties(completedWork: Fiber) {
           mergeLanes(child.lanes, child.childLanes),
         );
 
+        // 把所有儿子自己的副作用（flags）跟儿子的副作用（subtreeFlags）冒泡到父fiber上
         subtreeFlags |= child.subtreeFlags;
         subtreeFlags |= child.flags;
 
@@ -766,7 +774,7 @@ function bubbleProperties(completedWork: Fiber) {
         child = child.sibling;
       }
     }
-
+    // 这里是一个优化，通过判断subtreeFlags是否有值来确定子节点是否有更新、新增
     completedWork.subtreeFlags |= subtreeFlags;
   } else {
     // Bubble up the earliest expiration time.
@@ -905,6 +913,7 @@ function completeDehydratedSuspenseBoundary(
   }
 }
 
+// 根据类型不同创建真实 DOM
 function completeWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -1183,6 +1192,7 @@ function completeWork(
       }
       // Fall through
     }
+    // 原生
     case HostComponent: {
       popHostContext(workInProgress);
       const type = workInProgress.type;
@@ -1220,6 +1230,7 @@ function completeWork(
           prepareToHydrateHostInstance(workInProgress, currentHostContext);
         } else {
           const rootContainerInstance = getRootHostContainer();
+          // 创建真实DOM
           const instance = createInstance(
             type,
             newProps,
@@ -1229,13 +1240,18 @@ function completeWork(
           );
           // TODO: For persistent renderers, we should pass children as part
           // of the initial instance creation
+          // 追加儿子到真实DOM身上
+          // 比如 h1的子节点 [hello、<span>world</span>]追加到h1上，h1有flag为placement，向上冒泡到根节点，
+          // 根节点就知道有新增的，会执行h1的新增。h1的子DOM已经追加了，直接提交一次就好了；
           appendAllChildren(instance, workInProgress, false, false);
+          // 设置fiber的真实DOM为当前创建的DOM
           workInProgress.stateNode = instance;
 
           // Certain renderers require commit-time effects for initial mount.
           // (eg DOM renderer supports auto-focus for certain elements).
           // Make sure such renderers get scheduled for later work.
           if (
+            // 设置元素的属性
             finalizeInitialChildren(
               instance,
               type,
@@ -1247,6 +1263,7 @@ function completeWork(
           }
         }
       }
+      // 冒泡副作用
       bubbleProperties(workInProgress);
 
       // This must come at the very end of the complete phase, because it might

@@ -153,6 +153,9 @@ export function setValueForStyles(node, styles, prevStyles) {
       }
     }
   } else {
+    // styles 是一个对象 {color: "red", width: "100px"}
+    // 循环样式给 node 设置
+    // dom.setProperty("key", "value") 或者 dom.style[key] = value
     for (const styleName in styles) {
       if (styles.hasOwnProperty(styleName)) {
         const value = styles[styleName];

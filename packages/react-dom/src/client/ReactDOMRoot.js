@@ -103,9 +103,12 @@ function ReactDOMRoot(internalRoot: FiberRoot) {
 }
 
 // $FlowFixMe[prop-missing] found when upgrading Flow
+// render 方法
 ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
   // $FlowFixMe[missing-this-annot]
+  // children 为虚拟 DOM
   function (children: ReactNodeList): void {
+    // 找到根节点 FiberRootNode
     const root = this._internalRoot;
     if (root === null) {
       throw new Error('Cannot update an unmounted root.');
@@ -129,6 +132,7 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
         );
       }
     }
+    // 更新容器
     updateContainer(children, root, null, null);
   };
 
@@ -163,8 +167,9 @@ ReactDOMHydrationRoot.prototype.unmount = ReactDOMRoot.prototype.unmount =
     }
   };
 
+// 创建根节点
 export function createRoot(
-  container: Element | Document | DocumentFragment,
+  container: Element | Document | DocumentFragment, // div#root
   options?: CreateRootOptions,
 ): RootType {
   if (!isValidContainer(container)) {
@@ -229,6 +234,7 @@ export function createRoot(
     }
   }
 
+  // 创建根容器
   const root = createContainer(
     container,
     ConcurrentRoot,
@@ -250,6 +256,7 @@ export function createRoot(
   listenToAllSupportedEvents(rootContainerElement);
 
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
+  // 实例有一个 _internalRoot 属性指向 root
   return new ReactDOMRoot(root);
 }
 

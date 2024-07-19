@@ -800,6 +800,7 @@ export function scheduleUpdateOnFiber(
       }
     }
 
+    //确保在根节点上调度
     ensureRootIsScheduled(root);
     if (
       lane === SyncLane &&
@@ -846,6 +847,7 @@ export function isUnsafeClassRenderPhaseUpdate(fiber: Fiber): boolean {
 
 // This is the entry point for every concurrent task, i.e. anything that
 // goes through Scheduler.
+// 工作循环的入口
 export function performConcurrentWorkOnRoot(
   root: FiberRoot,
   didTimeout: boolean,
@@ -899,6 +901,7 @@ export function performConcurrentWorkOnRoot(
     (disableSchedulerTimeoutInWorkLoop || !didTimeout);
   let exitStatus = shouldTimeSlice
     ? renderRootConcurrent(root, lanes)
+    // 第一次渲染应该是同步的（渲染阶段）
     : renderRootSync(root, lanes);
 
   if (exitStatus !== RootInProgress) {
@@ -970,8 +973,10 @@ export function performConcurrentWorkOnRoot(
 
         // We now have a consistent tree. The next step is either to commit it,
         // or, if something suspended, wait to commit it after a timeout.
+        // 我们现在已经有一个完整的 fiber 树了
         root.finishedWork = finishedWork;
         root.finishedLanes = lanes;
+        // 提交阶段（commit阶段）
         finishConcurrentRender(root, exitStatus, finishedWork, lanes);
       }
       break;
@@ -1112,6 +1117,7 @@ function finishConcurrentRender(
 
   if (shouldForceFlushFallbacksInDEV()) {
     // We're inside an `act` scope. Commit immediately.
+    // 提交根root，把真实dom展示在页面中
     commitRoot(
       root,
       workInProgressRootRecoverableErrors,
@@ -1633,6 +1639,7 @@ function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
 
   resetWorkInProgressStack();
   workInProgressRoot = root;
+  // 创建一个新的 fiber 树（分为 workInProgress 和 current —— 双缓存技术）
   const rootWorkInProgress = createWorkInProgress(root.current, null);
   workInProgress = rootWorkInProgress;
   workInProgressRootRenderLanes = lanes;
@@ -1993,6 +2000,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
     }
 
     workInProgressTransitions = getTransitionsForLanes(root, lanes);
+    // 准备一个新鲜的栈用来构建fiber树
     prepareFreshStack(root, lanes);
   }
 
@@ -2048,6 +2056,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
           }
         }
       }
+      // 开始工作循环
       workLoopSync();
       break;
     } catch (thrownValue) {
@@ -2104,6 +2113,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 function workLoopSync() {
   // Perform work without checking if we need to yield between fiber.
   while (workInProgress !== null) {
+    // 执行每个工作单元
     performUnitOfWork(workInProgress);
   }
 }
@@ -2374,10 +2384,12 @@ function workLoopConcurrent() {
   }
 }
 
+// 工作循环分为两个阶段（beginWork、completeWork）
 function performUnitOfWork(unitOfWork: Fiber): void {
   // The current, flushed, state of this fiber is the alternate. Ideally
   // nothing should rely on this, but relying on it here means that we don't
   // need an additional field on the work in progress.
+  // 首次传入的 unitOfWork 应该是新创建的 workInProgress fiber
   const current = unitOfWork.alternate;
 
   let next;
@@ -2405,6 +2417,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
         entangledRenderLanes,
       );
     } else {
+      // 找到下一个工作单元
       next = beginWork(current, unitOfWork, entangledRenderLanes);
     }
   }
@@ -2412,11 +2425,15 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   if (!disableStringRefs) {
     resetCurrentFiber();
   }
+  // 把待处理的属性（pendingProps）变成已经处理过的属性（memoizedProps）
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
+  // 如果没有下一个工作单元就完成此单元
   if (next === null) {
     // If this doesn't spawn new work, complete the current work.
+    // 如果没有子节点了，当前节点的工作单元就可以完成了
     completeUnitOfWork(unitOfWork);
   } else {
+    // 如果有就继续循环
     workInProgress = next;
   }
 }
@@ -2664,6 +2681,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
           entangledRenderLanes,
         );
       } else {
+        // 执行此fiber的完成工作，如果是原生组件的话就创建真实的DOM节点
         next = completeWork(current, completedWork, entangledRenderLanes);
       }
       // Update render duration assuming we didn't error.
@@ -2676,6 +2694,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
       return;
     }
 
+    // 如果有弟弟，就构建弟弟对应的fiber子链表
     const siblingFiber = completedWork.sibling;
     if (siblingFiber !== null) {
       // If there is more work to do in this returnFiber, do that next.
@@ -2684,8 +2703,10 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     }
     // Otherwise, return to the parent
     // $FlowFixMe[incompatible-type] we bail out when we get a null
+    // 如果没有弟弟了，证明该父亲下面的所有子节点都完成了，父节点自己也要完成了
     completedWork = returnFiber;
     // Update the next thing we're working on in case something throws.
+    // 找到根fiber的父节点是null,就跳出循环了；workInProgress也就为null了，证明构建完成了整颗fiber树
     workInProgress = completedWork;
   } while (completedWork !== null);
 
@@ -2931,6 +2952,7 @@ function commitRootImpl(
   // to check for the existence of `firstEffect` to satisfy Flow. I think the
   // only other reason this optimization exists is because it affects profiling.
   // Reconsider whether this is necessary.
+  // 检查整棵树中是否有副作用（子树是否有、根节点是否有）
   const subtreeHasEffects =
     (finishedWork.subtreeFlags &
       (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
@@ -2940,6 +2962,7 @@ function commitRootImpl(
       (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
     NoFlags;
 
+  // 如果有副作用才执行提交操作
   if (subtreeHasEffects || rootHasEffect) {
     const prevTransition = ReactSharedInternals.T;
     ReactSharedInternals.T = null;
@@ -2968,6 +2991,7 @@ function commitRootImpl(
     }
 
     // The next phase is the mutation phase, where we mutate the host tree.
+    // 提交 effect
     commitMutationEffects(root, finishedWork, lanes);
 
     if (enableCreateEventHandleAPI) {
@@ -2981,6 +3005,7 @@ function commitRootImpl(
     // the mutation phase, so that the previous tree is still current during
     // componentWillUnmount, but before the layout phase, so that the finished
     // work is current during componentDidMount/Update.
+    // 替换当前的 fiber 树
     root.current = finishedWork;
 
     // The next phase is the layout phase, where we call effects that read
@@ -3016,6 +3041,7 @@ function commitRootImpl(
     ReactSharedInternals.T = prevTransition;
   } else {
     // No effects.
+    // 替换当前的 fiber 树
     root.current = finishedWork;
     // Measure these anyway so the flamegraph explicitly shows that there were
     // no effects.

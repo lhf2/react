@@ -234,7 +234,7 @@ function findHostInstanceWithWarning(
 }
 
 export function createContainer(
-  containerInfo: Container,
+  containerInfo: Container, // div#root
   tag: RootTag,
   hydrationCallbacks: null | SuspenseHydrationCallbacks,
   isStrictMode: boolean,
@@ -259,6 +259,7 @@ export function createContainer(
 ): OpaqueRoot {
   const hydrate = false;
   const initialChildren = null;
+  // 创建一个 FiberRootNode 节点
   return createFiberRoot(
     containerInfo,
     tag,
@@ -342,11 +343,12 @@ export function createHydrationContainer(
 }
 
 export function updateContainer(
-  element: ReactNodeList,
-  container: OpaqueRoot,
+  element: ReactNodeList, // 虚拟 dom
+  container: OpaqueRoot, // 根容器 FiberRootNode
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
 ): Lane {
+  // 找到根fiber
   const current = container.current;
   const lane = requestUpdateLane(current);
   updateContainerImpl(
@@ -421,9 +423,11 @@ function updateContainerImpl(
     }
   }
 
+  // 创建一个更新
   const update = createUpdate(lane);
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 更新的内容为虚拟 dom
   update.payload = {element};
 
   callback = callback === undefined ? null : callback;
@@ -440,8 +444,10 @@ function updateContainerImpl(
     update.callback = callback;
   }
 
+  // 将更新入更新队列
   const root = enqueueUpdate(rootFiber, update, lane);
   if (root !== null) {
+    // 在fiber上调度更新
     scheduleUpdateOnFiber(root, rootFiber, lane);
     entangleTransitions(root, rootFiber, lane);
   }
