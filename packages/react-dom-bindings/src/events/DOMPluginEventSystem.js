@@ -87,6 +87,8 @@ type DispatchEntry = {
 export type DispatchQueue = Array<DispatchEntry>;
 
 // TODO: remove top-level side effect.
+// 通过各种插件来注册事件
+// 注册简单事件 如 click，实际是往 allNativeEvents 这个 set 里面添加事件名；
 SimpleEventPlugin.registerEvents();
 EnterLeaveEventPlugin.registerEvents();
 ChangeEventPlugin.registerEvents();
@@ -94,13 +96,13 @@ SelectEventPlugin.registerEvents();
 BeforeInputEventPlugin.registerEvents();
 
 function extractEvents(
-  dispatchQueue: DispatchQueue,
-  domEventName: DOMEventName,
-  targetInst: null | Fiber,
-  nativeEvent: AnyNativeEvent,
-  nativeEventTarget: null | EventTarget,
-  eventSystemFlags: EventSystemFlags,
-  targetContainer: EventTarget,
+  dispatchQueue: DispatchQueue, // 派发队列
+  domEventName: DOMEventName, // 原生DOM事件名  click
+  targetInst: null | Fiber, // 点击的目标fiber
+  nativeEvent: AnyNativeEvent, // 原生事件
+  nativeEventTarget: null | EventTarget, // 事件源
+  eventSystemFlags: EventSystemFlags, // 事件系统标识 （冒泡｜捕获）
+  targetContainer: EventTarget,// div#root
 ) {
   // TODO: we should remove the concept of a "SimpleEventPlugin".
   // This is the basic functionality of the event system. All
@@ -108,6 +110,7 @@ function extractEvents(
   // should probably be inlined somewhere and have its logic
   // be core the to event system. This would potentially allow
   // us to ship builds of React without the polyfilled plugins below.
+  // 使用各种插件进行提取
   SimpleEventPlugin.extractEvents(
     dispatchQueue,
     domEventName,
@@ -237,8 +240,12 @@ function executeDispatch(
   listener: Function,
   currentTarget: EventTarget,
 ): void {
+  // 合成事件实例currentTarget是不断变化的
+  // event.nativeEventTarget 它是原始的事件源，是永远不变的，点击谁就是谁 span
+  // event.currentTarget 当前的事件源，它是会随着事件回调的执行不断变化的 h1 span
   event.currentTarget = currentTarget;
   try {
+    // 执行函数 传入合成事件
     listener(event);
   } catch (error) {
     reportGlobalError(error);
@@ -253,8 +260,10 @@ function processDispatchQueueItemsInOrder(
 ): void {
   let previousInstance;
   if (inCapturePhase) {
+    // 捕获 因为是从内向外收集的函数 [子捕获fn, 父捕获fn] 实际执行是先执行父的，需要倒序
     for (let i = dispatchListeners.length - 1; i >= 0; i--) {
       const {instance, currentTarget, listener} = dispatchListeners[i];
+      // 如果阻止冒泡了 就不继续执行了
       if (instance !== previousInstance && event.isPropagationStopped()) {
         return;
       }
@@ -267,13 +276,16 @@ function processDispatchQueueItemsInOrder(
           currentTarget,
         );
       } else {
+        // 执行派发函数
         executeDispatch(event, listener, currentTarget);
       }
       previousInstance = instance;
     }
   } else {
+    // 冒泡 顺序执行
     for (let i = 0; i < dispatchListeners.length; i++) {
       const {instance, currentTarget, listener} = dispatchListeners[i];
+      // 如果阻止冒泡了 就不继续执行了
       if (instance !== previousInstance && event.isPropagationStopped()) {
         return;
       }
@@ -312,8 +324,11 @@ function dispatchEventsForPlugins(
   targetInst: null | Fiber,
   targetContainer: EventTarget,
 ): void {
+  // 获取原生事件源
   const nativeEventTarget = getEventTarget(nativeEvent);
+  // 存储的是 [event事件、事件处理函数]
   const dispatchQueue: DispatchQueue = [];
+  // 提取事件 
   extractEvents(
     dispatchQueue,
     domEventName,
@@ -323,6 +338,7 @@ function dispatchEventsForPlugins(
     eventSystemFlags,
     targetContainer,
   );
+  // 处理派发队列（取出来监听函数执行的过程）
   processDispatchQueue(dispatchQueue, eventSystemFlags);
 }
 
@@ -357,9 +373,9 @@ export function listenToNonDelegatedEvent(
 }
 
 export function listenToNativeEvent(
-  domEventName: DOMEventName,
-  isCapturePhaseListener: boolean,
-  target: EventTarget,
+  domEventName: DOMEventName, // 原生事件 click
+  isCapturePhaseListener: boolean, // 是否捕获阶段
+  target: EventTarget, // div#root
 ): void {
   if (__DEV__) {
     if (nonDelegatedEvents.has(domEventName) && !isCapturePhaseListener) {
@@ -371,7 +387,7 @@ export function listenToNativeEvent(
     }
   }
 
-  let eventSystemFlags = 0;
+  let eventSystemFlags = 0; // 冒泡 = 0，捕获 = 4
   if (isCapturePhaseListener) {
     eventSystemFlags |= IS_CAPTURE_PHASE;
   }
@@ -415,13 +431,15 @@ const listeningMarker = '_reactListening' + Math.random().toString(36).slice(2);
 export function listenToAllSupportedEvents(rootContainerElement: EventTarget) {
   if (!(rootContainerElement: any)[listeningMarker]) {
     (rootContainerElement: any)[listeningMarker] = true;
-    allNativeEvents.forEach(domEventName => {
+    allNativeEvents.forEach(domEventName => { // [click]
       // We handle selectionchange separately because it
       // doesn't bubble and needs to be on the document.
       if (domEventName !== 'selectionchange') {
         if (!nonDelegatedEvents.has(domEventName)) {
+          // 监听冒泡的原始事件
           listenToNativeEvent(domEventName, false, rootContainerElement);
         }
+        // 监听捕获的原始事件
         listenToNativeEvent(domEventName, true, rootContainerElement);
       }
     });
@@ -447,6 +465,7 @@ function addTrappedEventListener(
   isCapturePhaseListener: boolean,
   isDeferredListenerForLegacyFBSupport?: boolean,
 ) {
+  // 创建事件监听器
   let listener = createEventListenerWrapperWithPriority(
     targetContainer,
     domEventName,
@@ -511,6 +530,7 @@ function addTrappedEventListener(
         isPassiveListener,
       );
     } else {
+      // 捕获（调用原生事件 addEventListener） 
       unsubscribeListener = addEventCaptureListener(
         targetContainer,
         domEventName,
@@ -526,6 +546,7 @@ function addTrappedEventListener(
         isPassiveListener,
       );
     } else {
+      // 冒泡 (调用原生事件 addEventListener） 
       unsubscribeListener = addEventBubbleListener(
         targetContainer,
         domEventName,
@@ -669,6 +690,7 @@ export function dispatchEventForPluginEventSystem(
   }
 
   batchedUpdates(() =>
+    // 透传参数调用此函数
     dispatchEventsForPlugins(
       domEventName,
       eventSystemFlags,
@@ -707,6 +729,7 @@ export function accumulateSinglePhaseListeners(
   let lastHostComponent = null;
 
   // Accumulate all instances and listeners via the target -> root path.
+  // 从目标fiber到根fiber，统计所有的监听函数
   while (instance !== null) {
     const {stateNode, tag} = instance;
     // Handle listeners that are on HostComponents (i.e. <div>)
@@ -742,9 +765,11 @@ export function accumulateSinglePhaseListeners(
 
       // Standard React on* listeners, i.e. onClick or onClickCapture
       if (reactEventName !== null) {
+        // 从 node 的 props 上获取到 onClick、onClickCapture 函数收集起来
         const listener = getListener(instance, reactEventName);
         if (listener != null) {
           listeners.push(
+            // 这里收集的是一个对象 传参原样返回
             createDispatchListener(instance, listener, lastHostComponent),
           );
         }

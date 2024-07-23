@@ -28,6 +28,7 @@ function functionThatReturnsFalse() {
 
 // This is intentionally a factory so that we have different returned constructors.
 // If we had a single constructor, it would be megamorphic and engines would deopt.
+// 这是一个工厂函数，通过传入不同的接口定义，我们就能返回不同的构造函数
 function createSyntheticEvent(Interface: EventInterfaceType) {
   /**
    * Synthetic events are dispatched by event plugins, typically in response to a
@@ -50,6 +51,7 @@ function createSyntheticEvent(Interface: EventInterfaceType) {
     nativeEvent: {[propName: string]: mixed, ...},
     nativeEventTarget: null | EventTarget,
   ) {
+    // 把参数赋值给实例
     this._reactName = reactName;
     this._targetInst = targetInst;
     this.type = reactEventType;
@@ -57,6 +59,7 @@ function createSyntheticEvent(Interface: EventInterfaceType) {
     this.target = nativeEventTarget;
     this.currentTarget = null;
 
+    // 复制接口里的属性
     for (const propName in Interface) {
       if (!Interface.hasOwnProperty(propName)) {
         continue;
@@ -76,13 +79,16 @@ function createSyntheticEvent(Interface: EventInterfaceType) {
     if (defaultPrevented) {
       this.isDefaultPrevented = functionThatReturnsTrue;
     } else {
+      // 阻止默认事件
       this.isDefaultPrevented = functionThatReturnsFalse;
     }
+    // 阻止冒泡
     this.isPropagationStopped = functionThatReturnsFalse;
     return this;
   }
 
   // $FlowFixMe[prop-missing] found when upgrading Flow
+  // 处理浏览器的兼容
   assign(SyntheticBaseEvent.prototype, {
     // $FlowFixMe[missing-this-annot]
     preventDefault: function () {
@@ -96,8 +102,10 @@ function createSyntheticEvent(Interface: EventInterfaceType) {
         event.preventDefault();
         // $FlowFixMe[illegal-typeof] - flow is not aware of `unknown` in IE
       } else if (typeof event.returnValue !== 'unknown') {
+        // IE
         event.returnValue = false;
       }
+      // 执行完阻止默认事件后，修改isDefaultPrevented函数的返回值为true
       this.isDefaultPrevented = functionThatReturnsTrue;
     },
 
@@ -119,7 +127,7 @@ function createSyntheticEvent(Interface: EventInterfaceType) {
         // IE specific).
         event.cancelBubble = true;
       }
-
+      // 执行完阻止冒泡事件后，修改isPropagationStopped函数的返回值为true
       this.isPropagationStopped = functionThatReturnsTrue;
     },
 
@@ -229,6 +237,8 @@ const MouseEventInterface: EventInterfaceType = {
     return lastMovementY;
   },
 };
+// 通过一个工厂函数 createSyntheticEvent
+// 传入不同的接口来实现不同的类
 export const SyntheticMouseEvent: $FlowFixMe =
   createSyntheticEvent(MouseEventInterface);
 

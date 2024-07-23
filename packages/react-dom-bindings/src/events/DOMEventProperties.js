@@ -115,16 +115,18 @@ if (enableCreateEventHandleAPI) {
 }
 
 function registerSimpleEvent(domEventName: DOMEventName, reactName: string) {
+  // 这是一个map 用来存储dom事件名跟react事件名的映射关系 click-onClick
   topLevelEventsToReactNames.set(domEventName, reactName);
+  // 注册两个阶段（捕获、冒泡）的事件
   registerTwoPhaseEvent(reactName, [domEventName]);
 }
 
 export function registerSimpleEvents() {
   for (let i = 0; i < simpleEventPluginEvents.length; i++) {
-    const eventName = ((simpleEventPluginEvents[i]: any): string);
-    const domEventName = ((eventName.toLowerCase(): any): DOMEventName);
-    const capitalizedEvent = eventName[0].toUpperCase() + eventName.slice(1);
-    registerSimpleEvent(domEventName, 'on' + capitalizedEvent);
+    const eventName = ((simpleEventPluginEvents[i]: any): string); // click
+    const domEventName = ((eventName.toLowerCase(): any): DOMEventName); // click
+    const capitalizedEvent = eventName[0].toUpperCase() + eventName.slice(1); // Click
+    registerSimpleEvent(domEventName, 'on' + capitalizedEvent); // click onClick
   }
   // Special cases where event names don't match.
   registerSimpleEvent(ANIMATION_END, 'onAnimationEnd');

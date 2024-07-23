@@ -49,19 +49,21 @@ function shouldPreventMouseEvent(
  * @return {?function} The stored callback.
  */
 export default function getListener(
-  inst: Fiber,
-  registrationName: string,
+  inst: Fiber, // 目标fiber
+  registrationName: string, // 注册的react名称 onClick
 ): Function | null {
   const stateNode = inst.stateNode;
   if (stateNode === null) {
     // Work in progress (ex: onload events in incremental mode).
     return null;
   }
+  // 通过 node[internalPropsKey] 获取到 props
   const props = getFiberCurrentPropsFromNode(stateNode);
   if (props === null) {
     // Work in progress.
     return null;
   }
+  // 从 props 中找到 onClick 属性
   const listener = props[registrationName];
   if (shouldPreventMouseEvent(registrationName, inst.type, props)) {
     return null;

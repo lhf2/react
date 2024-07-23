@@ -62,12 +62,15 @@ function extractEvents(
   eventSystemFlags: EventSystemFlags,
   targetContainer: EventTarget,
 ): void {
+  // 获取react事件名 onClick
   const reactName = topLevelEventsToReactNames.get(domEventName);
   if (reactName === undefined) {
     return;
   }
+  // 合成事件的构造函数
   let SyntheticEventCtor = SyntheticEvent;
   let reactEventType: string = domEventName;
+  // 根据不同的事件名赋值不同的构造函数
   switch (domEventName) {
     case 'keypress':
       // Firefox creates a keypress event for function keys too. This removes
@@ -114,6 +117,7 @@ function extractEvents(
     case 'mouseout':
     case 'mouseover':
     case 'contextmenu':
+      // 点击事件走的是这里
       SyntheticEventCtor = SyntheticMouseEvent;
       break;
     case 'drag':
@@ -171,7 +175,7 @@ function extractEvents(
       // Unknown event. This is used by createEventHandle.
       break;
   }
-
+  // 是否捕获阶段
   const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;
   if (
     enableCreateEventHandleAPI &&
@@ -207,7 +211,7 @@ function extractEvents(
       // Then we can remove this special list.
       // This is a breaking change that can wait until React 18.
       (domEventName === 'scroll' || domEventName === 'scrollend');
-
+    // 统计单个阶段的监听函数
     const listeners = accumulateSinglePhaseListeners(
       targetInst,
       reactName,
@@ -218,6 +222,7 @@ function extractEvents(
     );
     if (listeners.length > 0) {
       // Intentionally create event lazily.
+      // 合成事件
       const event: ReactSyntheticEvent = new SyntheticEventCtor(
         reactName,
         reactEventType,
@@ -225,6 +230,8 @@ function extractEvents(
         nativeEvent,
         nativeEventTarget,
       );
+      // {event：合成事件，listeners: [子捕获fn, 父捕获fn]}
+      // {event：合成事件，listeners: [子冒泡fn, 父冒泡fn]}
       dispatchQueue.push({event, listeners});
     }
   }

@@ -90,7 +90,7 @@ export function createEventListenerWrapperWithPriority(
   const eventPriority = getEventPriority(domEventName);
   let listenerWrapper;
   switch (eventPriority) {
-    case DiscreteEventPriority:
+    case DiscreteEventPriority: // 离散事件 click
       listenerWrapper = dispatchDiscreteEvent;
       break;
     case ContinuousEventPriority:
@@ -101,6 +101,7 @@ export function createEventListenerWrapperWithPriority(
       listenerWrapper = dispatchEvent;
       break;
   }
+  // 绑定死三个参数
   return listenerWrapper.bind(
     null,
     domEventName,
@@ -113,13 +114,14 @@ function dispatchDiscreteEvent(
   domEventName: DOMEventName,
   eventSystemFlags: EventSystemFlags,
   container: EventTarget,
-  nativeEvent: AnyNativeEvent,
+  nativeEvent: AnyNativeEvent, // 原生事件 调用 addEventListener 的时候 target.addEventListener("click", (event：NativeEvent就是这里的event) => xx, true)
 ) {
   const prevTransition = ReactSharedInternals.T;
   ReactSharedInternals.T = null;
   const previousPriority = getCurrentUpdatePriority();
   try {
     setCurrentUpdatePriority(DiscreteEventPriority);
+    // 透传参数调用此函数
     dispatchEvent(domEventName, eventSystemFlags, container, nativeEvent);
   } finally {
     setCurrentUpdatePriority(previousPriority);
@@ -155,6 +157,7 @@ export function dispatchEvent(
     return;
   }
 
+  // 找到当前点击的目标，并找到对应的fiber。后续通过fiber从内往外找到对应的所有事件数组
   let blockedOn = findInstanceBlockingEvent(nativeEvent);
   if (blockedOn === null) {
     dispatchEventForPluginEventSystem(
@@ -228,6 +231,7 @@ export function dispatchEvent(
 export function findInstanceBlockingEvent(
   nativeEvent: AnyNativeEvent,
 ): null | Container | SuspenseInstance {
+  // 获取当前的事件源
   const nativeEventTarget = getEventTarget(nativeEvent);
   return findInstanceBlockingTarget(nativeEventTarget);
 }
@@ -242,7 +246,7 @@ export function findInstanceBlockingTarget(
   // TODO: Warn if _enabled is false.
 
   return_targetInst = null;
-
+  // 获取当前节点对应的 Fiber
   let targetInst = getClosestInstanceFromNode(targetNode);
 
   if (targetInst !== null) {

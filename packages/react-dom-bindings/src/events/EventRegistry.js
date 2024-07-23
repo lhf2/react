@@ -37,8 +37,8 @@ export const possibleRegistrationNames: {
 // Trust the developer to only use possibleRegistrationNames in __DEV__
 
 export function registerTwoPhaseEvent(
-  registrationName: string,
-  dependencies: Array<DOMEventName>,
+  registrationName: string, //onClick
+  dependencies: Array<DOMEventName>, //[click]
 ): void {
   registerDirectEvent(registrationName, dependencies);
   registerDirectEvent(registrationName + 'Capture', dependencies);
@@ -68,8 +68,8 @@ export function registerDirectEvent(
       possibleRegistrationNames.ondblclick = registrationName;
     }
   }
-
+  // 循环 [click] 往 allNativeEvents set 中添加原生事件
   for (let i = 0; i < dependencies.length; i++) {
-    allNativeEvents.add(dependencies[i]);
+    allNativeEvents.add(dependencies[i]); // click
   }
 }

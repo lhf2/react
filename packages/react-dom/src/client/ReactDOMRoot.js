@@ -253,7 +253,8 @@ export function createRoot(
     container.nodeType === COMMENT_NODE
       ? (container.parentNode: any)
       : container;
-  listenToAllSupportedEvents(rootContainerElement);
+  // 监听所有支持的事件
+  listenToAllSupportedEvents(rootContainerElement); // div#root
 
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
   // 实例有一个 _internalRoot 属性指向 root

@@ -511,7 +511,9 @@ export function createInstance(
         }
       }
   }
+  // 添加真实DOM跟fiber的关系 node[internalInstanceKey] = fiber
   precacheFiberNode(internalInstanceHandle, domElement);
+  // node[internalPropsKey] = props
   updateFiberProps(domElement, props);
   return domElement;
 }

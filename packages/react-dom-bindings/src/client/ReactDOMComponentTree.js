@@ -86,6 +86,7 @@ export function isContainerMarkedAsRoot(node: Container): boolean {
 // HostRoot back. To get to the HostRoot, you need to pass a child of it.
 // The same thing applies to Suspense boundaries.
 export function getClosestInstanceFromNode(targetNode: Node): null | Fiber {
+  // node[internalInstanceKey] = fiber
   let targetInst = (targetNode: any)[internalInstanceKey];
   if (targetInst) {
     // Don't return HostRoot or SuspenseComponent here.
