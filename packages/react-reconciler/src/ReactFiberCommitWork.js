@@ -2740,9 +2740,9 @@ function commitMutationEffectsOnFiber(
       // Fall through
     }
     case HostComponent: {
-      // 递归遍历所有儿子的副作用
+      // 先遍历它们的子节点，处理它们的子节点上的副作用
       recursivelyTraverseMutationEffects(root, finishedWork, lanes);
-      // 提交自己的副作用
+      // 再处理自己身上的副作用
       commitReconciliationEffects(finishedWork);
 
       if (flags & Ref) {

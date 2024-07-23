@@ -1165,6 +1165,7 @@ function updateFunctionComponent(
     );
     hasId = checkDidRenderIdHook();
   } else {
+    // 实际是传入props调用函数组件的方法，返回虚拟DOM
     nextChildren = renderWithHooks(
       current,
       workInProgress,
@@ -1190,6 +1191,7 @@ function updateFunctionComponent(
 
   // React DevTools reads this flag.
   workInProgress.flags |= PerformedWork;
+  // 协调子节点
   reconcileChildren(current, workInProgress, nextChildren, renderLanes);
   return workInProgress.child;
 }
@@ -3956,8 +3958,9 @@ function beginWork(
         renderLanes,
       );
     }
+    // 函数组件的处理
     case FunctionComponent: {
-      const Component = workInProgress.type;
+      const Component = workInProgress.type; // 定义组件的函数
       const unresolvedProps = workInProgress.pendingProps;
       const resolvedProps =
         disableDefaultPropsExceptForClasses ||

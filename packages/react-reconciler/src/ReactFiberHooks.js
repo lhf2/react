@@ -589,6 +589,7 @@ export function renderWithHooks<Props, SecondArg>(
     (workInProgress.mode & StrictLegacyMode) !== NoMode;
 
   shouldDoubleInvokeUserFnsInHooksDEV = shouldDoubleRenderDEV;
+  // 传入 props，调用定义函数组件的方法
   let children = __DEV__
     ? callComponentInDEV(Component, props, secondArg)
     : Component(props, secondArg);
@@ -622,7 +623,7 @@ export function renderWithHooks<Props, SecondArg>(
   }
 
   finishRenderingHooks(current, workInProgress, Component);
-
+  // 返回虚拟DOM
   return children;
 }
 
