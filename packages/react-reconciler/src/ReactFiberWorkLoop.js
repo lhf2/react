@@ -1664,7 +1664,7 @@ function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
   // and Sync lane in the same batch, but at Transition priority, because the
   // Sync lane already suspended.
   entangledRenderLanes = getEntangledLanes(root, lanes);
-
+  // 从数组中取出来对应的更新，放到更新队列queue中（构建循环队列）
   finishQueueingConcurrentUpdates();
 
   if (__DEV__) {

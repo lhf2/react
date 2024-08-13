@@ -270,7 +270,7 @@ function coerceRef(
   if (enableRefAsProp) {
     // TODO: This is a temporary, intermediate step. When enableRefAsProp is on,
     // we should resolve the `ref` prop during the begin phase of the component
-    // it's attached to (HostComponent, ClassComponent, etc).
+    // it's attached to (completeWork, ClassComponent, etc).
     const refProp = element.props.ref;
     ref = refProp !== undefined ? refProp : null;
   } else {
@@ -453,6 +453,7 @@ function createChildReconciler(
     // We currently set sibling to null and index to 0 here because it is easy
     // to forget to do before returning it. E.g. for the single child case.
     const clone = createWorkInProgress(fiber, pendingProps);
+    // 重置 index 和 Sibling
     clone.index = 0;
     clone.sibling = null;
     return clone;
@@ -494,6 +495,7 @@ function createChildReconciler(
   function placeSingleChild(newFiber: Fiber): Fiber {
     // This is simpler for the single child case. We only need to do a
     // placement for inserting new children.
+    // 如果需要追踪副作用 并 没有老节点
     if (shouldTrackSideEffects && newFiber.alternate === null) {
       newFiber.flags |= Placement | PlacementDEV;
     }
@@ -1621,18 +1623,19 @@ function createChildReconciler(
     return created;
   }
 
-  // 协调单个元素（通过vdom创建出fiber）
+  // 协调单个元素（挂载：通过vdom创建出fiber，更新：dom-diff）
   function reconcileSingleElement(
     returnFiber: Fiber, // 父fiber
     currentFirstChild: Fiber | null, // 老的第一个儿子
     element: ReactElement, // 新的虚拟dom
     lanes: Lanes,
   ): Fiber {
-    const key = element.key;
-    let child = currentFirstChild;
+    const key = element.key; // vdom 的 key
+    let child = currentFirstChild; // 老的第一个儿子
     while (child !== null) {
       // TODO: If key === null and child.key === null, then this only applies to
       // the first item in the list.
+      // key 一样
       if (child.key === key) {
         const elementType = element.type;
         if (elementType === REACT_FRAGMENT_TYPE) {
@@ -1649,6 +1652,7 @@ function createChildReconciler(
           }
         } else {
           if (
+            // type 也一样（可以复用之前的 fiber）
             child.elementType === elementType ||
             // Keep this check inline so it only runs on the false path:
             (__DEV__
@@ -1664,6 +1668,7 @@ function createChildReconciler(
               resolveLazy(elementType) === child.type)
           ) {
             deleteRemainingChildren(returnFiber, child.sibling);
+            // 复用fiber
             const existing = useFiber(child, element.props);
             coerceRef(returnFiber, child, existing, element);
             existing.return = returnFiber;

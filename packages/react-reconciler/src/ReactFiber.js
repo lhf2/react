@@ -267,6 +267,13 @@ export function isFunctionClassComponent(
   return shouldConstruct(type);
 }
 
+// 1. current 和 workInProgress 不是一个对象；
+// 2. workInProgress
+//   2.1 有两种情况，一种是没有，创建一个新的，互相通过 alternate 指向；
+//   2.2 存在 alternate，直接复用老的 alternate 就可以了（双缓存）；
+// 复用有两层含义：
+// 1. 复用老的 fiber 对象
+// 2. 复用老的真实DOM
 // This is used to create an alternate fiber to do work on.
 export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   let workInProgress = current.alternate;

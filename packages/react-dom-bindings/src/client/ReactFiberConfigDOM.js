@@ -711,10 +711,12 @@ export function commitUpdate(
   internalInstanceHandle: Object,
 ): void {
   // Diff and update the properties.
+  // 更新属性
   updateProperties(domElement, type, oldProps, newProps);
 
   // Update the props handle so that we know which props are the ones with
   // with current event handlers.
+  // 更新 node[internalPropsKey] = newProps
   updateFiberProps(domElement, newProps);
 }
 

@@ -423,6 +423,7 @@ function updateHostContainer(current: null | Fiber, workInProgress: Fiber) {
   }
 }
 
+// 给 fiber 添加更新的 flag
 function updateHostComponent(
   current: Fiber,
   workInProgress: Fiber,
@@ -1196,6 +1197,7 @@ function completeWork(
     case HostComponent: {
       popHostContext(workInProgress);
       const type = workInProgress.type;
+      // 更新逻辑
       if (current !== null && workInProgress.stateNode != null) {
         updateHostComponent(
           current,

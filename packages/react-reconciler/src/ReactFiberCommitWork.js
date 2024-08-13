@@ -2765,7 +2765,7 @@ function commitMutationEffectsOnFiber(
             captureCommitPhaseError(finishedWork, finishedWork.return, error);
           }
         }
-
+        // 更新
         if (flags & Update) {
           const instance: Instance = finishedWork.stateNode;
           if (instance != null) {
@@ -2778,6 +2778,7 @@ function commitMutationEffectsOnFiber(
               current !== null ? current.memoizedProps : newProps;
             const type = finishedWork.type;
             try {
+              // 提交更新
               commitUpdate(instance, type, oldProps, newProps, finishedWork);
             } catch (error) {
               captureCommitPhaseError(finishedWork, finishedWork.return, error);

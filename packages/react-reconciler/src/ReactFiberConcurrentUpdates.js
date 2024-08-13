@@ -86,17 +86,19 @@ export function getConcurrentlyUpdatedLanes(): Lanes {
   return concurrentlyUpdatedLanes;
 }
 
+// 把更新先缓存到concurrentQueues数组中
 function enqueueUpdate(
-  fiber: Fiber,
+  fiber: Fiber, 
   queue: ConcurrentQueue | null,
   update: ConcurrentUpdate | null,
   lane: Lane,
 ) {
   // Don't update the `childLanes` on the return path yet. If we already in
   // the middle of rendering, wait until after it has completed.
-  concurrentQueues[concurrentQueuesIndex++] = fiber;
-  concurrentQueues[concurrentQueuesIndex++] = queue;
-  concurrentQueues[concurrentQueuesIndex++] = update;
+  // 四哥一组添加到数组中 [fiber, queue, update, lane]
+  concurrentQueues[concurrentQueuesIndex++] = fiber; // 函数组件对应的 fiber
+  concurrentQueues[concurrentQueuesIndex++] = queue; // 要更新的hook对应的更新队列
+  concurrentQueues[concurrentQueuesIndex++] = update; // 更新对象
   concurrentQueues[concurrentQueuesIndex++] = lane;
 
   concurrentlyUpdatedLanes = mergeLanes(concurrentlyUpdatedLanes, lane);
@@ -111,15 +113,18 @@ function enqueueUpdate(
   }
 }
 
+// 把更新添加到更新队列中
 export function enqueueConcurrentHookUpdate<S, A>(
-  fiber: Fiber,
-  queue: HookQueue<S, A>,
-  update: HookUpdate<S, A>,
+  fiber: Fiber, // 函数组件对应的fiber
+  queue: HookQueue<S, A>, // 要更新的hook对应的更新队列
+  update: HookUpdate<S, A>,//更新对象
   lane: Lane,
 ): FiberRoot | null {
   const concurrentQueue: ConcurrentQueue = (queue: any);
   const concurrentUpdate: ConcurrentUpdate = (update: any);
+  // 更新入队
   enqueueUpdate(fiber, concurrentQueue, concurrentUpdate, lane);
+  // 从更新的 fiber 找到根节点
   return getRootForUpdatedFiber(fiber);
 }
 
